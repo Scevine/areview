@@ -1,6 +1,6 @@
+use fnv::FnvHashMap;
 use once_cell::sync::Lazy;
 use regex::{Captures, Match, Regex};
-use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -16,6 +16,8 @@ pub enum Direction {
 }
 
 pub type Vnum = u32;
+
+type HashMap<T, V> = FnvHashMap<T, V>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Room {
@@ -132,7 +134,7 @@ static DOOR_REGEX: Lazy<Regex> = Lazy::new(|| {
 });
 
 fn parse_doors(room_vnum: Vnum, text: &str) -> HashMap<Direction, Vnum> {
-    let mut exits = HashMap::new();
+    let mut exits = HashMap::default();
 
     for captures in DOOR_REGEX.captures_iter(text) {
         match parse_door(text, captures) {
