@@ -3,6 +3,7 @@ mod room;
 use fnv::FnvHashMap;
 use std::error::Error;
 use std::path::Path;
+use std::rc::Rc;
 
 use room::{parse_rooms, Direction, Room};
 
@@ -13,12 +14,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         eprintln!("No path to area file supplied!");
         std::process::exit(1);
     });
-    let rooms = load_area(&path)
-        .map_err(|e| {
+    let rooms = match load_area(&path) {
+        Ok(rooms) => rooms,
+        Err(e) => {
             eprintln!("{e}");
             std::process::exit(1);
-        })
-        .unwrap();
+        }
+    };
     let floors = sort_rooms(rooms);
     println!("{:?}", floors);
     Ok(())
@@ -29,7 +31,8 @@ fn load_area(path: &dyn AsRef<Path>) -> Result<Vec<Room>, Box<dyn Error>> {
     parse_rooms(&file)
 }
 
-fn sort_rooms(rooms: Vec<Room>) -> Vec<Vec<Room>> {
+fn sort_rooms(rooms: Vec<Room>) -> Vec<Vec<Rc<Room>>> {
+    let rooms: Vec<_> = rooms.into_iter().map(|r| Rc::new(r)).collect();
     let all_rooms = {
         let mut hash = HashMap::default();
         for room in &rooms {
