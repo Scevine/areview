@@ -15,11 +15,13 @@ pub enum Direction {
     Down,
 }
 
-#[derive(Debug)]
+pub type Vnum = u32;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Room {
     pub name: String,
-    pub vnum: u16,
-    pub exits: HashMap<Direction, u16>,
+    pub vnum: Vnum,
+    pub exits: HashMap<Direction, Vnum>,
 }
 
 pub fn parse_rooms(text: &str) -> Result<Vec<Room>, Box<dyn Error>> {
@@ -90,7 +92,7 @@ fn parse_room<'a>(
     text_end: usize,
 ) -> Result<Room, Box<dyn Error + 'a>> {
     let vnum_text = &text[vnum_start + 1..vnum_end];
-    let vnum = u16::from_str(vnum_text)?;
+    let vnum = u32::from_str(vnum_text)?;
     let room_body = &text[vnum_end..text_end];
     let captures = ROOM_REGEX
         .captures(room_body)
@@ -100,7 +102,7 @@ fn parse_room<'a>(
     let name = room_body[name_match.start()..name_match.end()].to_string();
 
     let captures_match = captures.get(0).unwrap();
-    let exits = parse_doors(&room_body[captures_match.end()..]);
+    let exits = parse_doors(vnum, &room_body[captures_match.end()..]);
 
     Ok(Room { name, vnum, exits })
 }
@@ -129,13 +131,20 @@ static DOOR_REGEX: Lazy<Regex> = Lazy::new(|| {
     .unwrap()
 });
 
-fn parse_doors(text: &str) -> HashMap<Direction, u16> {
+fn parse_doors(room_vnum: Vnum, text: &str) -> HashMap<Direction, Vnum> {
     let mut exits = HashMap::new();
 
     for captures in DOOR_REGEX.captures_iter(text) {
         match parse_door(text, captures) {
             Ok((direction, destination)) => {
-                exits.insert(direction, destination);
+                if exits.contains_key(&direction) {
+                    eprintln!(
+                        "Duplicate exit direction in room {}: {:?}",
+                        room_vnum, direction
+                    );
+                } else {
+                    exits.insert(direction, destination);
+                }
             }
             Err(e) => eprintln!("{e}"),
         }
@@ -147,7 +156,7 @@ fn parse_doors(text: &str) -> HashMap<Direction, u16> {
 fn parse_door<'a>(
     text: &'a str,
     captures: Captures,
-) -> Result<(Direction, u16), Box<dyn Error + 'a>> {
+) -> Result<(Direction, Vnum), Box<dyn Error + 'a>> {
     let direction_match = captures.name("direction").unwrap();
     let direction = match &text[direction_match.start()..direction_match.end()] {
         "0" => Direction::North,
@@ -159,7 +168,7 @@ fn parse_door<'a>(
         dir => return Err(Box::new(InvalidDirection(dir))),
     };
     let destination_match = captures.name("destination").unwrap();
-    let destination = u16::from_str(&text[destination_match.start()..destination_match.end()])?;
+    let destination = u32::from_str(&text[destination_match.start()..destination_match.end()])?;
 
     Ok((direction, destination))
 }
