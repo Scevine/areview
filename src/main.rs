@@ -15,18 +15,24 @@ fn main() {
 }
 
 static ROOM_REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"(?mx)\A\s*
+    Regex::new(
+        r"(?mx)\A\s*
         (?P<name>[^~]*)~
         [^~]*~\s*
-        \d+\s+(?P<flags>[\d|]+)\s+(?P<sector>\d+)\s*").unwrap()
+        \d+\s+(?P<flags>[\d|]+)\s+(?P<sector>\d+)\s*",
+    )
+    .unwrap()
 });
 
 static DOOR_REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"(?imsx)
+    Regex::new(
+        r"(?imsx)
         ^D(?P<direction>\d+)
         [^~]*~
         [^~]*~\s*
-        (?P<locks>\d+)\s+\d+\s+(?P<destination>\d+)").unwrap()
+        (?P<locks>\d+)\s+\d+\s+(?P<destination>\d+)",
+    )
+    .unwrap()
 });
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -97,11 +103,17 @@ fn parse_rooms(text: &str) -> Vec<Room> {
     rooms
 }
 
-fn parse_room<'a>(text: &'a str, vnum_start: usize, vnum_end: usize, text_end: usize) -> Result<Room, Box<dyn Error + 'a>> {
-    let vnum_text = &text[vnum_start + 1 .. vnum_end];
+fn parse_room<'a>(
+    text: &'a str,
+    vnum_start: usize,
+    vnum_end: usize,
+    text_end: usize,
+) -> Result<Room, Box<dyn Error + 'a>> {
+    let vnum_text = &text[vnum_start + 1..vnum_end];
     let vnum = u16::from_str(vnum_text)?;
-    let room_body = &text[vnum_end .. text_end];
-    let captures = ROOM_REGEX.captures(room_body)
+    let room_body = &text[vnum_end..text_end];
+    let captures = ROOM_REGEX
+        .captures(room_body)
         .ok_or(InvalidRoomBody { body: room_body })?;
 
     let name_match = captures.name("name").unwrap();
@@ -141,7 +153,10 @@ fn parse_doors(text: &str) -> HashMap<Direction, u16> {
     exits
 }
 
-fn parse_door<'a>(text: &'a str, captures: Captures) -> Result<(Direction, u16), Box<dyn Error + 'a>> {
+fn parse_door<'a>(
+    text: &'a str,
+    captures: Captures,
+) -> Result<(Direction, u16), Box<dyn Error + 'a>> {
     let direction_match = captures.name("direction").unwrap();
     let direction = match &text[direction_match.start()..direction_match.end()] {
         "0" => Direction::North,
@@ -150,7 +165,7 @@ fn parse_door<'a>(text: &'a str, captures: Captures) -> Result<(Direction, u16),
         "3" => Direction::West,
         "4" => Direction::Up,
         "5" => Direction::Down,
-        dir => return Err(Box::new(InvalidDirection(dir)))
+        dir => return Err(Box::new(InvalidDirection(dir))),
     };
     let destination_match = captures.name("destination").unwrap();
     let destination = u16::from_str(&text[destination_match.start()..destination_match.end()])?;
