@@ -27,10 +27,10 @@ pub struct Room {
 }
 
 pub fn parse_rooms(text: &str) -> Result<Vec<Room>, Box<dyn Error>> {
-    let room_section_regex = Regex::new(r"(?ims)^#ROOMS$(.*?)^#0$").unwrap();
+    let room_section_regex = Regex::new(r"(?ims)^#ROOMS\s*$(.*?)^#0\s*$").unwrap();
 
     // TODO: write a PR to regex to let String be indexed by match
-    let room_section = room_section_regex.captures(&text).ok_or(NoRooms)?;
+    let room_section = room_section_regex.captures(&text).ok_or(NoRoomsSection)?;
 
     let section_match = room_section.get(1).unwrap();
     let section_text = &text[section_match.start()..section_match.end()];
@@ -67,11 +67,22 @@ pub fn parse_rooms(text: &str) -> Result<Vec<Room>, Box<dyn Error>> {
 }
 
 #[derive(Debug)]
+struct NoRoomsSection;
+
+impl Display for NoRoomsSection {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "No #ROOMS section detected in file")
+    }
+}
+
+impl Error for NoRoomsSection {}
+
+#[derive(Debug)]
 struct NoRooms;
 
 impl Display for NoRooms {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "No #ROOMS section detected in file")
+        write!(f, "No rooms in #ROOMS section")
     }
 }
 
