@@ -22,32 +22,56 @@ pub struct Room {
     pub exits: HashMap<Direction, u16>,
 }
 
-pub fn parse_rooms(text: &str) -> Vec<Room> {
+pub fn parse_rooms(text: &str) -> Result<Vec<Room>, Box<dyn Error>> {
+    let room_section_regex = Regex::new(r"(?ims)^#ROOMS$(.*?)^#0$").unwrap();
+
+    // TODO: write a PR to regex to let String be indexed by match
+    let room_section = room_section_regex.captures(&text).ok_or(NoRooms)?;
+
+    let section_match = room_section.get(1).unwrap();
+    let section_text = &text[section_match.start()..section_match.end()];
+
     let room_split_regex = Regex::new(r"(?m)^#(\d+)").unwrap();
-    let room_matches: Vec<Match> = room_split_regex.find_iter(text).collect();
+    let room_matches: Vec<Match> = room_split_regex.find_iter(section_text).collect();
     let mut rooms = vec![];
     if room_matches.is_empty() {
-        return rooms;
+        return Err(Box::new(NoRooms));
     }
 
     for matches in room_matches.windows(2) {
         let m = matches.get(0).unwrap();
         let next = matches.get(1).unwrap();
 
-        match parse_room(text, m.start(), m.end(), next.start()) {
+        match parse_room(section_text, m.start(), m.end(), next.start()) {
             Ok(room) => rooms.push(room),
             Err(e) => eprintln!("{e}"),
         }
     }
 
     let last_match = room_matches.iter().last().unwrap();
-    match parse_room(text, last_match.start(), last_match.end(), text.len()) {
+    match parse_room(
+        section_text,
+        last_match.start(),
+        last_match.end(),
+        section_text.len(),
+    ) {
         Ok(room) => rooms.push(room),
         Err(e) => eprintln!("{e}"),
     }
 
-    rooms
+    Ok(rooms)
 }
+
+#[derive(Debug)]
+struct NoRooms;
+
+impl Display for NoRooms {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "No #ROOMS section detected in file")
+    }
+}
+
+impl Error for NoRooms {}
 
 static ROOM_REGEX: Lazy<Regex> = Lazy::new(|| {
     Regex::new(
