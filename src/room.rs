@@ -3,6 +3,7 @@ use once_cell::sync::Lazy;
 use regex::{Captures, Match, Regex};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::rc::Rc;
 use std::str::FromStr;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -26,7 +27,7 @@ pub struct Room {
     pub exits: HashMap<Direction, Vnum>,
 }
 
-pub fn parse_rooms(text: &str) -> Result<Vec<Room>, Box<dyn Error>> {
+pub fn parse_rooms(text: &str) -> Result<Vec<Vec<Rc<Room>>>, Box<dyn Error>> {
     let room_section_regex = Regex::new(r"(?ims)^#ROOMS\s*$(.*?)^#0\s*$").unwrap();
 
     // TODO: write a PR to regex to let String be indexed by match
@@ -63,7 +64,7 @@ pub fn parse_rooms(text: &str) -> Result<Vec<Room>, Box<dyn Error>> {
         Err(e) => eprintln!("{e}"),
     }
 
-    Ok(rooms)
+    Ok(sort_rooms(rooms))
 }
 
 #[derive(Debug)]
@@ -196,3 +197,50 @@ impl<'a> Display for InvalidDirection<'a> {
 }
 
 impl<'a> Error for InvalidDirection<'a> {}
+
+fn sort_rooms(rooms: Vec<Room>) -> Vec<Vec<Rc<Room>>> {
+    let rooms: Vec<_> = rooms.into_iter().map(|r| Rc::new(r)).collect();
+    let all_rooms = {
+        let mut hash = HashMap::default();
+        for room in &rooms {
+            hash.insert(room.vnum, room.clone());
+        }
+        hash
+    };
+
+    let mut floors_hash = HashMap::default();
+    for room in rooms {
+        let floor = {
+            let (floor, _) = floors_hash
+                .entry(room.vnum)
+                .or_insert_with(|| (0i32, room.clone()));
+            *floor
+        };
+        for (dir, dest_vnum) in &room.exits {
+            if floors_hash.contains_key(dest_vnum) {
+                continue;
+            }
+            if let Some(dest) = all_rooms.get(dest_vnum).cloned() {
+                match dir {
+                    Direction::Up => {
+                        floors_hash.insert(*dest_vnum, (floor + 1, dest.clone()));
+                    }
+                    Direction::Down => {
+                        floors_hash.insert(*dest_vnum, (floor - 1, dest.clone()));
+                    }
+                    _ => {
+                        floors_hash.insert(*dest_vnum, (floor, dest.clone()));
+                    }
+                }
+            }
+        }
+    }
+
+    let mut floors = HashMap::default();
+    for (_, (floor_num, dest)) in floors_hash {
+        let floor = floors.entry(floor_num).or_insert_with(|| vec![]);
+        floor.push(dest);
+    }
+
+    floors.into_values().collect()
+}
