@@ -8,7 +8,7 @@ fn main() {
         eprintln!("No path to area file supplied!");
         std::process::exit(1);
     });
-    let rooms_by_floor = match load_area(&path) {
+    let (_all_rooms, by_plane) = match load_area(&path) {
         Ok(rooms) => rooms,
         Err(e) => {
             eprintln!("{e}");
