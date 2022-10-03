@@ -17,7 +17,7 @@ pub fn parse_rooms(text: &str) -> Result<Vec<Room>, Box<dyn Error>> {
 
     let room_split_regex = Regex::new(r"(?m)^#(\d+)").unwrap();
     let room_matches: Vec<Match> = room_split_regex.find_iter(section_text).collect();
-    let mut rooms = vec![];
+    let mut rooms: Vec<Room> = vec![];
     if room_matches.is_empty() {
         return Err(Box::new(NoRooms));
     }
@@ -27,7 +27,13 @@ pub fn parse_rooms(text: &str) -> Result<Vec<Room>, Box<dyn Error>> {
         let next = matches.get(1).unwrap();
 
         match parse_room(section_text, m.start(), m.end(), next.start()) {
-            Ok(room) => rooms.push(room),
+            Ok(room) => {
+                if rooms.iter().any(|r| r.vnum == room.vnum) {
+                    eprintln!("Duplicate VNUM {}", room.vnum);
+                } else {
+                    rooms.push(room);
+                }
+            }
             Err(e) => eprintln!("{e}"),
         }
     }
