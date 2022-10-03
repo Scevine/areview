@@ -98,15 +98,22 @@ fn find_rooms_in_plane(
     // Remove rooms visited on this plane from the to-visit list
     left_to_visit.retain(|r| !this_plane.contains(r));
 
-    std::iter::once(this_plane)
+    let mut planes: Vec<_> = std::iter::once(this_plane)
         .chain(
             queue_for_different_plane
                 .into_iter()
                 .flat_map(|room| find_rooms_in_plane(Some(room), left_to_visit)),
         )
-        .collect()
+        .collect();
 
-    // TODO: handle the orphaned rooms that are still in left_to_visit
+    while !left_to_visit.is_empty() {
+        let mut other_planes = find_rooms_in_plane(None, left_to_visit);
+        planes.append(&mut other_planes);
+    }
+
+    planes.retain(|plane| !plane.is_empty());
+
+    planes
 }
 
 #[cfg(test)]
@@ -132,8 +139,8 @@ mod test {
 
         let original_rooms = vec![rooms.clone()];
 
-        let plane = find_rooms_in_plane(None, &mut rooms);
-        assert_eq!(plane, original_rooms);
+        let planes = find_rooms_in_plane(None, &mut rooms);
+        assert_eq!(planes, original_rooms);
     }
 
     #[test]
@@ -158,9 +165,9 @@ mod test {
             }),
         ];
 
-        let plane = find_rooms_in_plane(None, &mut rooms);
+        let planes = find_rooms_in_plane(None, &mut rooms);
         assert_eq!(
-            plane,
+            planes,
             vec![
                 vec![
                     Rc::new(Room {
@@ -183,5 +190,50 @@ mod test {
                 })],
             ]
         );
+    }
+
+    #[test]
+    fn find_rooms_in_plane_includes_orphaned_planes() {
+        let mut rooms = vec![
+            Rc::new(Room {
+                vnum: 1000,
+                name: "1000".into(),
+                exits: [(Direction::North, 1001u32)].into_iter().collect(),
+            }),
+            Rc::new(Room {
+                vnum: 1001,
+                name: "1001".into(),
+                exits: [(Direction::South, 1000u32)].into_iter().collect(),
+            }),
+            Rc::new(Room {
+                vnum: 1002,
+                name: "1002".into(),
+                exits: [].into_iter().collect(),
+            }),
+        ];
+
+        let planes = find_rooms_in_plane(None, &mut rooms);
+        assert_eq!(
+            planes,
+            vec![
+                vec![
+                    Rc::new(Room {
+                        vnum: 1000,
+                        name: "1000".into(),
+                        exits: [(Direction::North, 1001u32)].into_iter().collect()
+                    }),
+                    Rc::new(Room {
+                        vnum: 1001,
+                        name: "1001".into(),
+                        exits: [(Direction::South, 1000u32)].into_iter().collect()
+                    }),
+                ],
+                vec![Rc::new(Room {
+                    vnum: 1002,
+                    name: "1002".into(),
+                    exits: [].into_iter().collect(),
+                })],
+            ]
+        )
     }
 }
