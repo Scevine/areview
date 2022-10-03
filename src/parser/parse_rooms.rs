@@ -125,7 +125,7 @@ static DOOR_REGEX: Lazy<Regex> = Lazy::new(|| {
         ^D(?P<direction>\d+)
         [^~]*~
         [^~]*~\s*
-        (?P<locks>\d+)\s+\d+\s+(?P<destination>\d+)",
+        (?P<locks>\d+)\s+\S+\s+(?P<destination>\d+)",
     )
     .unwrap()
 });
