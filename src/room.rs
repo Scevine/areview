@@ -19,3 +19,11 @@ pub struct Room {
     pub exits: FnvHashMap<Direction, Vnum>,
 }
 
+#[derive(Debug, Copy, Clone, Eq, Hash)]
+pub struct Connection(pub Vnum, pub Vnum);
+
+impl PartialEq for Connection {
+    fn eq(&self, other: &Self) -> bool {
+        (self.0 == other.0 && self.1 == other.1) || (self.0 == other.1 && self.1 == other.0)
+    }
+}

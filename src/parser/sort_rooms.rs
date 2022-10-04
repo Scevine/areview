@@ -1,34 +1,44 @@
-use crate::room::{Direction, Room, Vnum};
-use fnv::FnvHashMap;
+use crate::room::{Connection, Direction, Room, Vnum};
+use fnv::{FnvHashMap, FnvHashSet};
 use std::rc::Rc;
 
-pub fn sort_rooms(rooms: Vec<Room>) -> (FnvHashMap<Vnum, Rc<Room>>, Vec<Vec<Rc<Room>>>) {
+pub fn sort_rooms(
+    rooms: Vec<Room>,
+) -> (
+    FnvHashMap<Vnum, Rc<Room>>,
+    Vec<Vec<Rc<Room>>>,
+    FnvHashSet<Connection>,
+) {
     let mut rooms: Vec<_> = rooms.into_iter().map(|r| Rc::new(r)).collect();
     let hash: FnvHashMap<Vnum, Rc<Room>> =
         rooms.iter().map(|room| (room.vnum, room.clone())).collect();
-    let planes = find_rooms_in_plane(None, &mut rooms);
-    (hash, planes)
+    let (planes, connections) = find_rooms_in_plane(None, &mut rooms);
+    (hash, planes, connections)
 }
 
 fn find_rooms_in_plane(
     room: Option<Rc<Room>>,
     left_to_visit: &mut Vec<Rc<Room>>,
-) -> Vec<Vec<Rc<Room>>> {
+) -> (Vec<Vec<Rc<Room>>>, FnvHashSet<Connection>) {
     let mut this_plane = vec![];
+    let mut connections = FnvHashSet::default();
 
     // Function should not be called with no rooms left to visit
     if left_to_visit.is_empty() {
-        return vec![this_plane];
+        return (vec![this_plane], connections);
     }
 
-    let mut queue = vec![room.unwrap_or_else(|| left_to_visit.remove(0))];
+    let mut queue = std::collections::VecDeque::with_capacity(left_to_visit.len());
+    queue.push_back(room.unwrap_or(left_to_visit[0].clone()));
     let mut queue_for_different_plane = vec![];
 
     while !queue.is_empty() {
-        let room = queue.pop().unwrap();
+        let room = queue.pop_front().unwrap();
         this_plane.push(room.clone());
 
         for (dir, dest) in &room.exits {
+            connections.insert(Connection(room.vnum, *dest));
+
             // Find the connected room
             if let Some(dest_room) = left_to_visit.iter().find(|r| r.vnum == *dest).cloned() {
                 // Should not be possible unless `left_to_visit` contained duplicate VNUMs
@@ -49,7 +59,7 @@ fn find_rooms_in_plane(
                         {
                             queue_for_different_plane.remove(idx);
                         }
-                        queue.push(dest_room);
+                        queue.push_back(dest_room);
                     }
                 }
             }
@@ -59,22 +69,22 @@ fn find_rooms_in_plane(
     // Remove rooms visited on this plane from the to-visit list
     left_to_visit.retain(|r| !this_plane.contains(r));
 
-    let mut planes: Vec<_> = std::iter::once(this_plane)
-        .chain(
-            queue_for_different_plane
-                .into_iter()
-                .flat_map(|room| find_rooms_in_plane(Some(room), left_to_visit)),
-        )
-        .collect();
+    let mut planes = vec![this_plane];
+    for room in queue_for_different_plane.into_iter() {
+        let (mut more_planes, more_connections) = find_rooms_in_plane(Some(room), left_to_visit);
+        planes.append(&mut more_planes);
+        connections = connections.union(&more_connections).cloned().collect();
+    }
 
     while !left_to_visit.is_empty() {
-        let mut other_planes = find_rooms_in_plane(None, left_to_visit);
-        planes.append(&mut other_planes);
+        let (mut more_planes, other_connections) = find_rooms_in_plane(None, left_to_visit);
+        planes.append(&mut more_planes);
+        connections = connections.union(&other_connections).cloned().collect();
     }
 
     planes.retain(|plane| !plane.is_empty());
 
-    planes
+    (planes, connections)
 }
 
 #[cfg(test)]
