@@ -27,7 +27,7 @@ fn model(_app: &App) -> Model {
 
 fn event(_app: &App, _model: &mut Model, _event: Event) {}
 
-const SQUARE_SIZE: f32 = 20f32;
+const SQUARE_SIZE: f32 = 30f32;
 const GRID_SIZE: f32 = SQUARE_SIZE * 2f32;
 
 fn view(app: &App, model: &Model, frame: Frame) {
@@ -53,33 +53,32 @@ fn view(app: &App, model: &Model, frame: Frame) {
         // Translate group, since groups don't have centered locations themselves
         let pdraw = draw
             .x_y(fake_pos.0, fake_pos.1)
-            .scale(GRID_SIZE)
-            .x_y(plane.center_x * -1f32, plane.center_y * -1f32);
+            .x_y(plane.center_x * -1f32 * GRID_SIZE, plane.center_y * -1f32 * GRID_SIZE);
 
         // For each location
         for location in &plane.locations {
-            let x = location.x;
-            let y = location.y;
+            let x = location.x * GRID_SIZE;
+            let y = location.y * GRID_SIZE;
             pdraw
                 .rect()
                 .x_y(x, y)
-                .w_h(0.5, 0.5)
+                .w_h(SQUARE_SIZE, SQUARE_SIZE)
                 .stroke(BLACK)
-                .stroke_weight(0.05)
+                .stroke_weight(2f32)
                 .color(WHITE);
-            // pdraw
-            //     .text(&location.room.vnum.to_string())
-            //     .x_y(x, y)
-            //     .color(RED);
+            pdraw
+                .text(&location.room.vnum.to_string())
+                .x_y(x, y)
+                .color(RED);
         }
-        pdraw.ellipse().x_y(0f32, 0f32).radius(0.1).color(BLUE);
+        pdraw.ellipse().x_y(0f32, 0f32).radius(5f32).color(BLUE);
         pdraw
             .ellipse()
             .x_y(
-                plane.center_x,
-                plane.center_y,
+                plane.center_x * GRID_SIZE,
+                plane.center_y * GRID_SIZE,
             )
-            .radius(0.1)
+            .radius(5f32)
             .color(GREEN);
     }
     draw.to_frame(app, &frame).unwrap();
