@@ -34,17 +34,31 @@ fn view(app: &App, model: &Model, frame: Frame) {
     draw.background().color(WHITE);
     let fake_positions = &[(-250f32, -250f32), (0f32, 0f32), (250f32, 250f32)];
     for (plane, fake_pos) in model.room_planes.iter().zip(fake_positions.iter()) {
+        let pdraw = draw.x_y(fake_pos.0, fake_pos.1);
         for location in &plane.locations {
-            let x = fake_pos.0 + location.x * SQUARE_SIZE * 2f32;
-            let y = fake_pos.1 + location.y * SQUARE_SIZE * 2f32;
-            draw.rect()
+            let x = location.x * SQUARE_SIZE * 2f32;
+            let y = location.y * SQUARE_SIZE * 2f32;
+            pdraw
+                .rect()
                 .x_y(x, y)
                 .w_h(SQUARE_SIZE, SQUARE_SIZE)
-                .color(BLACK);
-            draw.text(&location.room.vnum.to_string())
+                .stroke(BLACK)
+                .stroke_weight(2f32)
+                .color(WHITE);
+            pdraw
+                .text(&location.room.vnum.to_string())
                 .x_y(x, y)
                 .color(RED);
         }
+        pdraw.ellipse().x_y(0f32, 0f32).radius(5f32).color(BLUE);
+        pdraw
+            .ellipse()
+            .x_y(
+                plane.center_x * SQUARE_SIZE * 2f32,
+                plane.center_y * SQUARE_SIZE * 2f32,
+            )
+            .radius(5f32)
+            .color(GREEN);
     }
     draw.to_frame(app, &frame).unwrap();
 }

@@ -1,5 +1,11 @@
+mod group;
+mod location;
+
 use crate::room::{Connection, Direction, Room, Vnum};
+pub use group::Group;
+pub use location::Location;
 use fnv::{FnvHashMap, FnvHashSet};
+use nannou::winit::event::DeviceId;
 use std::rc::Rc;
 
 #[derive(Debug, Clone, Default)]
@@ -44,22 +50,6 @@ impl Model {
 // }
 //
 // impl Eq for Connection {}
-
-#[derive(Debug, Clone)]
-pub struct Location {
-    pub x: f32,
-    pub y: f32,
-    pub room: Rc<Room>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Group {
-    pub x: f32,
-    pub y: f32,
-    pub center_x: f32,
-    pub center_y: f32,
-    pub locations: Vec<Location>,
-}
 
 fn position_rooms(
     all_rooms: &FnvHashMap<Vnum, Rc<Room>>,
@@ -118,11 +108,5 @@ fn position_rooms_in_plane(all_rooms: &FnvHashMap<Vnum, Rc<Room>>, plane: Vec<Rc
         eprintln!("Room {} was not positioned as a location!", room.vnum);
     }
 
-    Group {
-        x: 0f32,
-        y: 0f32,
-        center_x: 0f32,
-        center_y: 0f32,
-        locations,
-    }
+    Group::new(locations)
 }
