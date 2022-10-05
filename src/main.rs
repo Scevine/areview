@@ -22,7 +22,7 @@ fn model(_app: &App) -> Model {
             std::process::exit(1);
         }
     };
-    Model::new(all_rooms, by_plane, connections)
+    Model::new(30f32, all_rooms, by_plane, connections)
 }
 
 fn event(_app: &App, _model: &mut Model, _event: Event) {}
@@ -38,48 +38,32 @@ fn view(app: &App, model: &Model, frame: Frame) {
     let fake_positions = &[(-250f32, -250f32), (0f32, 0f32), (250f32, 250f32)];
 
     // Draw a guide line to make sure we're centering our location groups correctly
-    draw
-        .line()
+    draw.line()
         .start(Vec2::new(-250f32, -250f32))
         .end(Vec2::new(250f32, 250f32))
         .weight(2f32)
         .color(RED);
 
-    // For each location group
-    for (plane, fake_pos) in model.room_planes.iter().zip(fake_positions.iter()) {
+    // For each room
+    for ((room, location), &plane) in model
+        .rooms
+        .iter()
+        .zip(&model.locations)
+        .zip(&model.room_planes)
+    {
+        let fake_pos = fake_positions.get(plane).unwrap_or(&(0f32, 0f32));
 
-        // Translate to group's position
-        // Scale to GRID_SIZE (so grid points are GRID_SIZE apart, and squares are GRID_SIZE/2 wide)
-        // Translate group, since groups don't have centered locations themselves
-        let pdraw = draw
-            .x_y(fake_pos.0, fake_pos.1)
-            .x_y(plane.center_x * -1f32 * GRID_SIZE, plane.center_y * -1f32 * GRID_SIZE);
+        let rdraw = draw
+            .x_y(fake_pos.0, fake_pos.1) // translate to group's location for now
+            .x_y(location.x, location.y);
 
-        // For each location
-        for location in &plane.locations {
-            let x = location.x * GRID_SIZE;
-            let y = location.y * GRID_SIZE;
-            pdraw
-                .rect()
-                .x_y(x, y)
-                .w_h(SQUARE_SIZE, SQUARE_SIZE)
-                .stroke(BLACK)
-                .stroke_weight(2f32)
-                .color(WHITE);
-            pdraw
-                .text(&location.room.vnum.to_string())
-                .x_y(x, y)
-                .color(RED);
-        }
-        pdraw.ellipse().x_y(0f32, 0f32).radius(5f32).color(BLUE);
-        pdraw
-            .ellipse()
-            .x_y(
-                plane.center_x * GRID_SIZE,
-                plane.center_y * GRID_SIZE,
-            )
-            .radius(5f32)
-            .color(GREEN);
+        rdraw
+            .rect()
+            .w_h(model.square_size(), model.square_size())
+            .stroke(BLACK)
+            .stroke_weight(2f32)
+            .color(WHITE);
+        rdraw.text(&room.vnum.to_string()).color(RED);
     }
     draw.to_frame(app, &frame).unwrap();
 }
