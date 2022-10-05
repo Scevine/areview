@@ -34,16 +34,6 @@ fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
     draw.background().color(WHITE);
 
-    // Before we get into moving location groups around, give each group a hardcoded position
-    let fake_positions = &[(-250f32, -250f32), (0f32, 0f32), (250f32, 250f32)];
-
-    // Draw a guide line to make sure we're centering our location groups correctly
-    draw.line()
-        .start(Vec2::new(-250f32, -250f32))
-        .end(Vec2::new(250f32, 250f32))
-        .weight(2f32)
-        .color(RED);
-
     // For each room
     for ((room, location), &plane) in model
         .rooms
@@ -51,10 +41,10 @@ fn view(app: &App, model: &Model, frame: Frame) {
         .zip(&model.locations)
         .zip(&model.room_planes)
     {
-        let fake_pos = fake_positions.get(plane).unwrap_or(&(0f32, 0f32));
+        let plane = &model.groups[plane];
 
         let rdraw = draw
-            .x_y(fake_pos.0, fake_pos.1) // translate to group's location for now
+            .x_y(plane.0.x, plane.0.y) // translate to group's location for now
             .x_y(location.x, location.y);
 
         rdraw

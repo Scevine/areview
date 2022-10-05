@@ -10,6 +10,7 @@ pub struct Model {
     pub rooms: Vec<Room>,
     pub locations: Vec<Vec2>,
     pub room_planes: Vec<usize>,
+    pub groups: Vec<Group>,
     pub connections: FnvHashSet<Connection>,
     pub button_pressed: Option<DeviceId>,
 }
@@ -18,21 +19,31 @@ impl Model {
     pub fn new(
         square_size: f32,
         all_rooms: FnvHashMap<Vnum, Rc<Room>>,
-        room_planes: Vec<Vec<Rc<Room>>>,
+        grouped_rooms: Vec<Vec<Rc<Room>>>,
         connections: FnvHashSet<Connection>,
     ) -> Self {
-        let mut all_locations = position_rooms(&all_rooms, room_planes, square_size);
+        let grouped_locations = position_rooms(&all_rooms, grouped_rooms, square_size);
+        let mut groups: Vec<_> = grouped_locations.iter().map(|(center, _)| Group(*center)).collect();
+        let mut all_locations: Vec<_> = grouped_locations.into_iter().map(|(_, ls)| ls).flatten().collect();
         all_locations.sort_by(|a, b| a.room.vnum.cmp(&b.room.vnum));
 
         let rooms = all_locations.iter().map(|l| (*l.room).clone()).collect();
         let locations = all_locations.iter().map(|l| Vec2::new(l.x, l.y)).collect();
-        let room_planes = all_locations.iter().map(|l| l.group).collect();
+        let room_planes = all_locations.into_iter().map(|l| l.group).collect();
+
+        let shift_groups_by = groups.capacity() as isize / 2isize;
+        for (i, group) in groups.iter_mut().enumerate() {
+            let mut pos = i as f32 - shift_groups_by as f32;
+            pos *= 150f32;
+            group.0 = pos - group.0;
+        }
 
         Model {
             square_size,
             rooms,
             locations,
             room_planes,
+            groups,
             connections,
             ..Default::default()
         }
@@ -52,15 +63,18 @@ struct Location {
     group: usize,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct Group(pub Vec2);
+
 fn position_rooms(
     all_rooms: &FnvHashMap<Vnum, Rc<Room>>,
     planes: Vec<Vec<Rc<Room>>>,
     square_size: f32,
-) -> Vec<Location> {
-    planes
+) -> Vec<(Vec2, Vec<Location>)> {
+planes
         .into_iter()
         .enumerate()
-        .flat_map(|(group, plane)| position_rooms_in_plane(all_rooms, plane, square_size, group))
+        .map(|(index, plane)| position_rooms_in_plane(all_rooms, plane, square_size, index))
         .collect()
 }
 
@@ -69,7 +83,7 @@ fn position_rooms_in_plane(
     plane: Vec<Rc<Room>>,
     square_size: f32,
     group: usize,
-) -> Vec<Location> {
+) -> (Vec2, Vec<Location>) {
     let mut locations: Vec<Location> = Vec::with_capacity(plane.len());
 
     let mut to_visit = std::collections::VecDeque::new();
@@ -123,5 +137,17 @@ fn position_rooms_in_plane(
         location.y *= square_size * 2.0;
     }
 
-    locations
+    let center = {
+        let mut max = Vec2::default();
+        let mut min = Vec2::default();
+        for loc in &locations {
+            max.x = max.x.max(loc.x);
+            max.y = max.y.max(loc.y);
+            min.x = min.x.min(loc.x);
+            min.y = min.y.min(loc.y);
+        }
+        (max + min) / 2f32
+    };
+
+    (center, locations)
 }
