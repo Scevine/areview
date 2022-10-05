@@ -13,6 +13,8 @@ pub struct Model {
     pub groups: Vec<Group>,
     pub connections: FnvHashSet<Connection>,
     pub button_pressed: Option<DeviceId>,
+    pub selected: Option<usize>,
+    pub in_selection: Vec<usize>,
 }
 
 impl Model {
@@ -23,8 +25,15 @@ impl Model {
         connections: FnvHashSet<Connection>,
     ) -> Self {
         let grouped_locations = position_rooms(&all_rooms, grouped_rooms, square_size);
-        let mut groups: Vec<_> = grouped_locations.iter().map(|(center, _)| Group(*center)).collect();
-        let mut all_locations: Vec<_> = grouped_locations.into_iter().map(|(_, ls)| ls).flatten().collect();
+        let mut groups: Vec<_> = grouped_locations
+            .iter()
+            .map(|(center, _)| Group(*center))
+            .collect();
+        let mut all_locations: Vec<_> = grouped_locations
+            .into_iter()
+            .map(|(_, ls)| ls)
+            .flatten()
+            .collect();
         all_locations.sort_by(|a, b| a.room.vnum.cmp(&b.room.vnum));
 
         let rooms = all_locations.iter().map(|l| (*l.room).clone()).collect();
@@ -71,7 +80,7 @@ fn position_rooms(
     planes: Vec<Vec<Rc<Room>>>,
     square_size: f32,
 ) -> Vec<(Vec2, Vec<Location>)> {
-planes
+    planes
         .into_iter()
         .enumerate()
         .map(|(index, plane)| position_rooms_in_plane(all_rooms, plane, square_size, index))

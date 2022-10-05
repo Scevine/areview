@@ -3,7 +3,9 @@ mod parser;
 mod room;
 
 use model::Model;
+use nannou::event::ElementState;
 use nannou::prelude::*;
+use nannou::winit::event::DeviceEvent;
 use parser::load_area;
 
 fn main() {
@@ -25,10 +27,57 @@ fn model(_app: &App) -> Model {
     Model::new(30f32, all_rooms, by_plane, connections)
 }
 
-fn event(_app: &App, _model: &mut Model, _event: Event) {}
+fn event(app: &App, model: &mut Model, event: Event) {
+    match event {
+        Event::DeviceEvent(
+            device_id,
+            DeviceEvent::Button {
+                button: 1,
+                state: ElementState::Pressed,
+            },
+        ) => {
+            model.button_pressed = Some(device_id);
 
-const SQUARE_SIZE: f32 = 30f32;
-const GRID_SIZE: f32 = SQUARE_SIZE * 2f32;
+            // Did it encounter a location group?
+            println!(
+                "Device pressed button 1 at {:?} {:?}",
+                app.mouse.x, app.mouse.y
+            );
+
+            let mut hit = None;
+            for ((idx, loc), &group) in model.locations.iter().enumerate().zip(&model.room_planes) {
+                let window_pos = model.groups[group].0 + *loc;
+                let half_square_size = model.square_size() * 0.5;
+                if app.mouse.x + half_square_size > window_pos.x
+                    && app.mouse.x - half_square_size < window_pos.x
+                    && app.mouse.y + half_square_size > window_pos.y
+                    && app.mouse.y - half_square_size < window_pos.y
+                {
+                    let room = &model.rooms[idx];
+                    println!("room {} hit", &room.vnum);
+                    hit = Some(idx);
+                }
+            }
+            model.selected = hit;
+        }
+        Event::DeviceEvent(
+            device_id,
+            DeviceEvent::Button {
+                button: 1,
+                state: ElementState::Released,
+            },
+        ) => {
+            match model.button_pressed {
+                Some(id) if id == device_id => {
+                    model.button_pressed = None;
+                }
+                _ => {}
+            }
+            // println!("Device released button 1");
+        }
+        _ => {}
+    }
+}
 
 fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
