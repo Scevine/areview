@@ -113,6 +113,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
         if selected {
             rdraw.rect().w_h(model.square_size(), model.square_size())
+                .no_fill()
                 .stroke(nannou::color::rgb_u32(0xf04e98))
                 .stroke_weight(10f32)
                 .finish();
