@@ -3,6 +3,7 @@ use fnv::{FnvHashMap, FnvHashSet};
 use nannou::prelude::Vec2;
 use nannou::winit::event::DeviceId;
 use std::rc::Rc;
+use std::time::Duration;
 
 #[derive(Debug, Clone, Default)]
 pub struct Model {
@@ -10,11 +11,10 @@ pub struct Model {
     pub rooms: Vec<Room>,
     pub locations: Vec<Vec2>,
     pub room_planes: Vec<usize>,
+    pub selected: Vec<bool>,
     pub groups: Vec<Group>,
     pub connections: FnvHashSet<Connection>,
-    pub button_pressed: Option<DeviceId>,
-    pub selected: Option<usize>,
-    pub in_selection: Vec<usize>,
+    pub ui: Ui,
 }
 
 impl Model {
@@ -35,6 +35,7 @@ impl Model {
             .flatten()
             .collect();
         all_locations.sort_by(|a, b| a.room.vnum.cmp(&b.room.vnum));
+        let num_rooms = all_locations.len();
 
         let rooms = all_locations.iter().map(|l| (*l.room).clone()).collect();
         let locations = all_locations.iter().map(|l| Vec2::new(l.x, l.y)).collect();
@@ -52,6 +53,7 @@ impl Model {
             rooms,
             locations,
             room_planes,
+            selected: vec![false; num_rooms],
             groups,
             connections,
             ..Default::default()
@@ -61,6 +63,34 @@ impl Model {
     #[inline]
     pub fn square_size(&self) -> f32 {
         self.square_size
+    }
+
+    pub fn select_all_in_plane(&mut self, group: usize) {
+        for (&plane, selected) in self.room_planes.iter().zip(&mut self.selected) {
+            if plane == group {
+                *selected = true;
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Ui {
+    pub device_pressed: Option<DeviceId>,
+    pub grabbed: Option<usize>,
+    pub last_click_device: Option<DeviceId>,
+    pub last_click_time: Duration,
+}
+
+const DOUBLE_CLICK_THRESHOLD: Duration = Duration::from_millis(250);
+
+impl Ui {
+    pub fn is_double_click(&self, device: DeviceId, now: Duration) -> bool {
+        if let Some(previous_device) = self.device_pressed {
+            (previous_device == device) && now - self.last_click_time < DOUBLE_CLICK_THRESHOLD
+        } else {
+            false
+        }
     }
 }
 
