@@ -1,4 +1,4 @@
-use crate::room::{Direction, Room, Vnum};
+use crate::room::{Direction, Room, Sector, Vnum};
 use fnv::FnvHashMap;
 use once_cell::sync::Lazy;
 use regex::{Captures, Match, Regex};
@@ -100,10 +100,18 @@ fn parse_room<'a>(
     let name_match = captures.name("name").unwrap();
     let name = room_body[name_match.start()..name_match.end()].to_string();
 
+    let sector_match = captures.name("sector").unwrap();
+    let sector = Sector::from_str(&room_body[sector_match.start()..sector_match.end()]);
+
     let captures_match = captures.get(0).unwrap();
     let exits = parse_doors(vnum, &room_body[captures_match.end()..]);
 
-    Ok(Room { name, vnum, exits })
+    Ok(Room {
+        name,
+        vnum,
+        exits,
+        sector,
+    })
 }
 
 #[derive(Debug)]

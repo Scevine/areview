@@ -7,6 +7,7 @@ use nannou::event::ElementState;
 use nannou::prelude::*;
 use nannou::winit::event::DeviceEvent;
 use parser::load_area;
+use room::Sector;
 
 fn main() {
     nannou::app(model).event(event).simple_window(view).run();
@@ -117,12 +118,35 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .stroke_weight(10f32)
                 .finish();
         }
+
+        let room_color = match room.sector {
+            Sector::Inside => GREEN,
+            Sector::City => GREEN,
+            Sector::Field => GREEN,
+            Sector::Forest => GREEN,
+            Sector::Hills => GREEN,
+            Sector::Mountain => GREEN,
+            Sector::WaterSwim => CYAN,
+            Sector::WaterNoswim => CYAN,
+            Sector::House => GREEN,
+            Sector::Air => WHITE,
+            Sector::Desert => GREEN,
+            Sector::Underwater => CYAN,
+            Sector::OnBottom => CYAN,
+            Sector::RogueGuild => GREEN,
+        };
+
         rdraw
             .rect()
             .w_h(model.square_size(), model.square_size())
+            .color(room_color);
+        rdraw
+            .rect()
+            .w_h(model.square_size(), model.square_size())
+            .no_fill()
             .stroke(BLACK)
             .stroke_weight(2f32)
-            .color(WHITE);
+            .finish();
         rdraw.text(&room.vnum.to_string()).color(RED);
     }
     draw.to_frame(app, &frame).unwrap();

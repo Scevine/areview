@@ -17,6 +17,9 @@ pub struct Room {
     pub name: String,
     pub vnum: Vnum,
     pub exits: FnvHashMap<Direction, Vnum>,
+    pub sector: Sector,
+    // pub safe: boolean,
+    // pub cursed: boolean,
 }
 
 #[derive(Debug, Copy, Clone, Eq, Hash)]
@@ -25,5 +28,46 @@ pub struct Connection(pub Vnum, pub Vnum);
 impl PartialEq for Connection {
     fn eq(&self, other: &Self) -> bool {
         (self.0 == other.0 && self.1 == other.1) || (self.0 == other.1 && self.1 == other.0)
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Sector {
+    Inside,
+    City,
+    Field,
+    Forest,
+    Hills,
+    Mountain,
+    WaterSwim,
+    WaterNoswim,
+    House,
+    Air,
+    Desert,
+    Underwater,
+    OnBottom,
+    RogueGuild,
+}
+
+impl Sector {
+    pub fn from_str(s: &str) -> Sector {
+        use Sector::*;
+        match s {
+            "0" => Inside,
+            "1" => City,
+            "2" => Field,
+            "3" => Forest,
+            "4" => Hills,
+            "5" => Mountain,
+            "6" => WaterSwim,
+            "7" => WaterNoswim,
+            "8" => House,
+            "9" => Air,
+            "10" => Desert,
+            "11" => Underwater,
+            "12" => OnBottom,
+            "13" => RogueGuild,
+            _ => Inside,
+        }
     }
 }

@@ -89,6 +89,7 @@ fn find_rooms_in_plane(
 
 #[cfg(test)]
 mod test {
+    use crate::Sector;
     use super::{find_rooms_in_plane, Direction, Rc, Room};
 
     #[test]
@@ -97,6 +98,7 @@ mod test {
             Rc::new(Room {
                 vnum: 1000,
                 name: "1000".into(),
+                sector: Sector::Inside,
                 exits: [(Direction::North, 1001u32), (Direction::West, 500u32)]
                     .into_iter()
                     .collect(),
@@ -104,6 +106,7 @@ mod test {
             Rc::new(Room {
                 vnum: 1001,
                 name: "1001".into(),
+                sector: Sector::Inside,
                 exits: [(Direction::South, 1000u32)].into_iter().collect(),
             }),
         ];
@@ -120,6 +123,7 @@ mod test {
             Rc::new(Room {
                 vnum: 1000,
                 name: "1000".into(),
+                sector: Sector::Inside,
                 exits: [(Direction::North, 1001u32), (Direction::Up, 1002u32)]
                     .into_iter()
                     .collect(),
@@ -127,11 +131,13 @@ mod test {
             Rc::new(Room {
                 vnum: 1001,
                 name: "1001".into(),
+                sector: Sector::Inside,
                 exits: [(Direction::South, 1000u32)].into_iter().collect(),
             }),
             Rc::new(Room {
                 vnum: 1002,
                 name: "1002".into(),
+                sector: Sector::Inside,
                 exits: [(Direction::Down, 1000u32)].into_iter().collect(),
             }),
         ];
@@ -144,6 +150,7 @@ mod test {
                     Rc::new(Room {
                         vnum: 1000,
                         name: "1000".into(),
+                        sector: Sector::Inside,
                         exits: [(Direction::North, 1001u32), (Direction::Up, 1002u32)]
                             .into_iter()
                             .collect()
@@ -151,12 +158,14 @@ mod test {
                     Rc::new(Room {
                         vnum: 1001,
                         name: "1001".into(),
+                        sector: Sector::Inside,
                         exits: [(Direction::South, 1000u32)].into_iter().collect()
                     }),
                 ],
                 vec![Rc::new(Room {
                     vnum: 1002,
                     name: "1002".into(),
+                    sector: Sector::Inside,
                     exits: [(Direction::Down, 1000u32)].into_iter().collect(),
                 })],
             ]
@@ -169,16 +178,19 @@ mod test {
             Rc::new(Room {
                 vnum: 1000,
                 name: "1000".into(),
+                sector: Sector::Inside,
                 exits: [(Direction::North, 1001u32)].into_iter().collect(),
             }),
             Rc::new(Room {
                 vnum: 1001,
                 name: "1001".into(),
+                sector: Sector::Inside,
                 exits: [(Direction::South, 1000u32)].into_iter().collect(),
             }),
             Rc::new(Room {
                 vnum: 1002,
                 name: "1002".into(),
+                sector: Sector::Inside,
                 exits: [].into_iter().collect(),
             }),
         ];
@@ -191,17 +203,20 @@ mod test {
                     Rc::new(Room {
                         vnum: 1000,
                         name: "1000".into(),
+                        sector: Sector::Inside,
                         exits: [(Direction::North, 1001u32)].into_iter().collect()
                     }),
                     Rc::new(Room {
                         vnum: 1001,
                         name: "1001".into(),
+                        sector: Sector::Inside,
                         exits: [(Direction::South, 1000u32)].into_iter().collect()
                     }),
                 ],
                 vec![Rc::new(Room {
                     vnum: 1002,
                     name: "1002".into(),
+                    sector: Sector::Inside,
                     exits: [].into_iter().collect(),
                 })],
             ]
