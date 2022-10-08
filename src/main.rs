@@ -2,14 +2,14 @@ mod model;
 mod parser;
 mod room;
 
+use crate::model::Exit;
+use crate::room::Direction;
 use model::{Connection, Model};
 use nannou::event::ElementState;
 use nannou::prelude::*;
 use nannou::winit::event::DeviceEvent;
 use parser::load_area;
 use room::Sector;
-use crate::model::Exit;
-use crate::room::Direction;
 
 fn main() {
     nannou::app(model).event(event).simple_window(view).run();
@@ -91,14 +91,12 @@ fn event(app: &App, model: &mut Model, event: Event) {
             }
             _ => {}
         },
-        Event::DeviceEvent(
-            device_id,
-            DeviceEvent::MouseMotion { delta: (x, y) },
-        ) => {
+        Event::DeviceEvent(device_id, DeviceEvent::MouseMotion { delta: (x, y) }) => {
             if let Some(id) = model.ui.device_pressed {
                 if id == device_id {
                     if let Some(grab_origin) = model.ui.grab_origin {
-                        model.ui.grab_offset = Some(Vec2::new(app.mouse.x, app.mouse.y) - grab_origin);
+                        model.ui.grab_offset =
+                            Some(Vec2::new(app.mouse.x, app.mouse.y) - grab_origin);
                     }
                 }
             }
@@ -134,7 +132,12 @@ enum ConnectionEndCap<'a> {
     Symbol,
 }
 
-fn draw_disconnected_connection(draw: &Draw, model: &Model, from: &Exit, end_cap: ConnectionEndCap) {
+fn draw_disconnected_connection(
+    draw: &Draw,
+    model: &Model,
+    from: &Exit,
+    end_cap: ConnectionEndCap,
+) {
     let mut start = model.locations[from.index];
     if let Some(offset) = model.ui.grab_offset {
         if model.selected[from.index] {
@@ -150,7 +153,11 @@ fn draw_disconnected_connection(draw: &Draw, model: &Model, from: &Exit, end_cap
         Direction::Down => Vec2::default() - model.square_size(),
     };
     let end = start + delta;
-    draw.line().stroke_weight(2f32).start(start).end(end).color(BLACK);
+    draw.line()
+        .stroke_weight(2f32)
+        .start(start)
+        .end(end)
+        .color(BLACK);
     match end_cap {
         ConnectionEndCap::Vnum(vnum) => {
             draw.xy(start + delta + delta * 0.5).text(vnum).color(RED);
@@ -164,18 +171,6 @@ fn draw_disconnected_connection(draw: &Draw, model: &Model, from: &Exit, end_cap
 fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
     draw.background().color(WHITE);
-
-    // DEBUG for each group
-    for plane in &model.plane_areas {
-        draw.rect()
-            .x_y(plane.x.middle(), plane.y.middle())
-            .width(plane.x.len())
-            .height(plane.y.len())
-            .no_fill()
-            .stroke(RED)
-            .stroke_weight(2f32)
-            .finish();
-    }
 
     // Draw connections
     for connection in &model.connections {

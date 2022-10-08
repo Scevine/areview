@@ -2,12 +2,7 @@ use crate::room::{Direction, Room, Vnum};
 use fnv::FnvHashMap;
 use std::rc::Rc;
 
-pub fn sort_rooms(
-    rooms: Vec<Room>,
-) -> (
-    FnvHashMap<Vnum, Rc<Room>>,
-    Vec<Vec<Rc<Room>>>
-) {
+pub fn sort_rooms(rooms: Vec<Room>) -> (FnvHashMap<Vnum, Rc<Room>>, Vec<Vec<Rc<Room>>>) {
     let mut rooms: Vec<_> = rooms.into_iter().map(|r| Rc::new(r)).collect();
     let hash: FnvHashMap<Vnum, Rc<Room>> =
         rooms.iter().map(|room| (room.vnum, room.clone())).collect();
@@ -18,7 +13,7 @@ pub fn sort_rooms(
 fn find_rooms_in_plane(
     room: Option<Rc<Room>>,
     left_to_visit: &mut Vec<Rc<Room>>,
-) -> Vec<Vec<Rc<Room>>>{
+) -> Vec<Vec<Rc<Room>>> {
     let mut this_plane = vec![];
 
     // Function should not be called with no rooms left to visit
@@ -83,8 +78,8 @@ fn find_rooms_in_plane(
 
 #[cfg(test)]
 mod test {
-    use crate::Sector;
     use super::{find_rooms_in_plane, Direction, Rc, Room};
+    use crate::Sector;
 
     #[test]
     fn find_rooms_in_plane_groups_nsew_connections() {

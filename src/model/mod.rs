@@ -1,9 +1,9 @@
 mod connection;
 mod position_rooms;
 
+use crate::room::{Room, Vnum};
 use connection::find_connections;
 pub use connection::{Connection, Exit};
-use crate::room::{Room, Vnum};
 use fnv::FnvHashMap;
 use nannou::prelude::{Rect, Vec2};
 use nannou::winit::event::DeviceId;
@@ -27,7 +27,7 @@ impl Model {
     pub fn new(
         square_size: f32,
         all_rooms: FnvHashMap<Vnum, Rc<Room>>,
-        grouped_rooms: Vec<Vec<Rc<Room>>>
+        grouped_rooms: Vec<Vec<Rc<Room>>>,
     ) -> Self {
         let (plane_areas, all_locations) = position_rooms(&all_rooms, grouped_rooms, square_size);
 
@@ -37,7 +37,11 @@ impl Model {
         let locations = all_locations.iter().map(|l| Vec2::new(l.x, l.y)).collect();
         let room_planes = all_locations.into_iter().map(|l| l.group).collect();
 
-        let indexes_by_vnums = rooms.iter().enumerate().map(|(idx, room)| (room.vnum, idx)).collect();
+        let indexes_by_vnums = rooms
+            .iter()
+            .enumerate()
+            .map(|(idx, room)| (room.vnum, idx))
+            .collect();
 
         let connections = find_connections(&all_rooms, indexes_by_vnums);
 

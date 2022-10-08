@@ -27,7 +27,9 @@ pub fn find_connections(
             let exit = Exit {
                 direction,
                 in_room: room.vnum,
-                index: *indexes_by_vnum.get(&room.vnum).expect("Room vnum wasn't included in vnum->index map"),
+                index: *indexes_by_vnum
+                    .get(&room.vnum)
+                    .expect("Room vnum wasn't included in vnum->index map"),
             };
             if connections.iter().any(|conn| match conn {
                 Connection::TwoWay { from, .. } if *from == exit => true,
@@ -52,7 +54,9 @@ pub fn find_connections(
                         to: Exit {
                             direction: dir,
                             in_room: dest.vnum,
-                            index: *indexes_by_vnum.get(&dest.vnum).expect("Room vnum wasn't included in vnum->index map"),
+                            index: *indexes_by_vnum
+                                .get(&dest.vnum)
+                                .expect("Room vnum wasn't included in vnum->index map"),
                         },
                         door: false, // FIXME
                     }
@@ -62,7 +66,9 @@ pub fn find_connections(
                         to: Exit {
                             direction: direction.opposite(),
                             in_room: dest.vnum,
-                            index: *indexes_by_vnum.get(&dest.vnum).expect("Room vnum wasn't invluced in vnum-index map"),
+                            index: *indexes_by_vnum
+                                .get(&dest.vnum)
+                                .expect("Room vnum wasn't invluced in vnum-index map"),
                         },
                         door: false, // FIXME
                     }
