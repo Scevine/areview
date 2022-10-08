@@ -99,7 +99,7 @@ fn event(app: &App, model: &mut Model, event: Event) {
             }
             _ => {}
         },
-        Event::DeviceEvent(device_id, DeviceEvent::MouseMotion { delta: (x, y) }) => {
+        Event::DeviceEvent(device_id, DeviceEvent::MouseMotion { .. }) => {
             if let Some(id) = model.ui.device_pressed {
                 if id == device_id {
                     if let Some(grab_origin) = model.ui.grab_origin {
