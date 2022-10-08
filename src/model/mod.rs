@@ -73,6 +73,8 @@ impl Model {
 pub struct Ui {
     pub device_pressed: Option<DeviceId>,
     pub grabbed: Option<usize>,
+    pub grab_origin: Option<Vec2>,
+    pub grab_offset: Option<Vec2>,
     pub last_click_device: Option<DeviceId>,
     pub last_click_time: Duration,
 }

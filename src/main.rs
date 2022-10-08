@@ -65,8 +65,17 @@ fn event(app: &App, model: &mut Model, event: Event) {
                 if is_double_click {
                     model.select_all_in_plane(model.room_planes[room_idx]);
                 }
+                model.ui.grab_origin = Some(model.locations[room_idx]);
             } else {
+                if let Some(grab_offset) = model.ui.grab_offset.take() {
+                    for (location, selected) in model.locations.iter_mut().zip(&model.selected) {
+                        if *selected {
+                            *location += grab_offset;
+                        }
+                    }
+                }
                 model.selected.fill(false);
+                model.ui.grab_origin = None;
             }
         }
         Event::DeviceEvent(
@@ -82,6 +91,18 @@ fn event(app: &App, model: &mut Model, event: Event) {
             }
             _ => {}
         },
+        Event::DeviceEvent(
+            device_id,
+            DeviceEvent::MouseMotion { delta: (x, y) },
+        ) => {
+            if let Some(id) = model.ui.device_pressed {
+                if id == device_id {
+                    if let Some(grab_origin) = model.ui.grab_origin {
+                        model.ui.grab_offset = Some(Vec2::new(app.mouse.x, app.mouse.y) - grab_origin);
+                    }
+                }
+            }
+        }
         _ => {}
     }
 }
@@ -165,7 +186,12 @@ fn view(app: &App, model: &Model, frame: Frame) {
         .zip(&model.locations)
         .zip(&model.selected)
     {
-        let rdraw = draw.xy(*location);
+        let mut rdraw = draw.xy(*location);
+        if let Some(grab_offset) = model.ui.grab_offset {
+            if selected {
+                rdraw = rdraw.xy(grab_offset);
+            }
+        }
 
         if selected {
             rdraw
