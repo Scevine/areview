@@ -2,7 +2,7 @@ mod connection;
 mod position_rooms;
 
 use connection::find_connections;
-pub use connection::Connection;
+pub use connection::{Connection, Exit};
 use crate::room::{Room, Vnum};
 use fnv::FnvHashMap;
 use nannou::prelude::{Rect, Vec2};

@@ -8,6 +8,8 @@ use nannou::prelude::*;
 use nannou::winit::event::DeviceEvent;
 use parser::load_area;
 use room::Sector;
+use crate::model::Exit;
+use crate::room::Direction;
 
 fn main() {
     nannou::app(model).event(event).simple_window(view).run();
@@ -84,6 +86,47 @@ fn event(app: &App, model: &mut Model, event: Event) {
     }
 }
 
+fn draw_connection(draw: &Draw, model: &Model, from: Exit, to: Exit, one_way: bool, door: bool) {
+    let from_origin = model.locations[from.index];
+    let to_origin = model.locations[to.index];
+    match (from.direction, to.direction) {
+        (Direction::Up, _) | (Direction::Down, _) | (_, Direction::Up) | (_, Direction::Down) => {
+            draw_disconnected_connection(draw, model, from, ConnectionEndCap::Symbol);
+            draw_disconnected_connection(draw, model, to, ConnectionEndCap::Symbol);
+        }
+        _ => {
+            draw.line().stroke_weight(2f32).start(from_origin).end(to_origin);
+        }
+    }
+}
+
+enum ConnectionEndCap<'a> {
+    Vnum(&'a str),
+    Symbol,
+}
+
+fn draw_disconnected_connection(draw: &Draw, model: &Model, from: Exit, end_cap: ConnectionEndCap) {
+    let start = model.locations[from.index];
+    let delta = match from.direction {
+        Direction::North => Vec2::new(0f32, model.square_size()),
+        Direction::East => Vec2::new(model.square_size(), 0f32),
+        Direction::South => Vec2::new(0f32, model.square_size() * -1f32),
+        Direction::West => Vec2::new(model.square_size() * -1f32, 0f32),
+        Direction::Up => Vec2::default() + model.square_size(),
+        Direction::Down => Vec2::default() - model.square_size(),
+    };
+    let end = start + delta;
+    draw.line().stroke_weight(2f32).start(start).end(end).color(BLACK);
+    match end_cap {
+        ConnectionEndCap::Vnum(vnum) => {
+            draw.xy(start + delta + delta * 0.5).text(vnum).color(RED); // FIXME: just have the vnums pre stringified
+        }
+        ConnectionEndCap::Symbol => {
+            // TODO
+        }
+    }
+}
+
 fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
     draw.background().color(WHITE);
@@ -104,11 +147,14 @@ fn view(app: &App, model: &Model, frame: Frame) {
     for connection in &model.connections {
         match connection {
             Connection::TwoWay { from, to, door } => {
-                let from_room = model.locations[from.index];
-                let to_room = model.locations[to.index];
-                draw.line().start(from_room).end(to_room);
+                draw_connection(&draw, &model, *from, *to, false, *door);
             }
-            _ => {}
+            Connection::OneWay { from, to, door } => {
+                draw_connection(&draw, &model, *from, *to, true, *door);
+            }
+            Connection::External { from, to, .. } => {
+                draw_disconnected_connection(&draw, &model, *from, ConnectionEndCap::Vnum(&to.to_string()));
+            }
         }
     }
 
