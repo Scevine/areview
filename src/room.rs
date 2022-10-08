@@ -30,6 +30,7 @@ pub type Vnum = u32;
 pub struct Room {
     pub name: String,
     pub vnum: Vnum,
+    pub string_vnum: String,
     pub exits: FnvHashMap<Direction, Vnum>,
     pub sector: Sector,
     // pub safe: boolean,

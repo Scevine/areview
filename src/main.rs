@@ -159,7 +159,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .stroke(BLACK)
             .stroke_weight(2f32)
             .finish();
-        rdraw.text(&room.vnum.to_string()).color(RED);
+        rdraw.text(&room.string_vnum).color(RED);
     }
     draw.to_frame(app, &frame).unwrap();
 }

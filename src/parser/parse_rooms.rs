@@ -109,6 +109,7 @@ fn parse_room<'a>(
     Ok(Room {
         name,
         vnum,
+        string_vnum: vnum.to_string(),
         exits,
         sector,
     })
