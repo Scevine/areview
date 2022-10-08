@@ -183,9 +183,94 @@ const CONNECTION_LABELS: &'static [&'static str] = &[
     "T", "U", "V", "W", "Z", "Y", "Z", "Γ", "Δ", "Θ", "Λ", "Ξ", "Π", "Σ", "Φ", "Ψ", "Ω",
 ];
 
+struct LabelColor {
+    background: Rgb8,
+    foreground: Rgb8,
+}
+
+impl LabelColor {
+    #[inline]
+    fn light(background: Rgb8) -> Self {
+        LabelColor {
+            background,
+            foreground: BLACK,
+        }
+    }
+    #[inline]
+    fn dark(background: Rgb8) -> Self {
+        LabelColor {
+            background,
+            foreground: WHITE,
+        }
+    }
+}
+
+fn color_of(sector: Sector) -> LabelColor {
+    match sector {
+        Sector::Inside => LabelColor::light(GAINSBORO),
+        Sector::House => LabelColor::light(BISQUE),
+        Sector::City => LabelColor::light(DARKGRAY),
+        Sector::RogueGuild => LabelColor::dark(DARKSLATEGRAY),
+
+        Sector::Field => LabelColor::light(LIGHTGREEN),
+        Sector::Hills => LabelColor::light(MEDIUMSEAGREEN),
+        Sector::Forest => LabelColor::dark(SEAGREEN),
+        Sector::Mountain => LabelColor::dark(OLIVEDRAB),
+        Sector::Desert => LabelColor::dark(OLIVE),
+
+        Sector::WaterSwim => LabelColor::light(SKYBLUE),
+        Sector::WaterNoswim => LabelColor::light(DEEPSKYBLUE),
+        Sector::Underwater => LabelColor::dark(ROYALBLUE),
+        Sector::OnBottom => LabelColor::dark(MEDIUMBLUE),
+
+        Sector::Air => LabelColor::light(ALICEBLUE),
+    }
+}
+
+const LEGEND_SECTORS: &'static [(Sector, &'static str)] = &[
+    (Sector::Inside, "Inside"),
+    (Sector::House, "House"),
+    (Sector::City, "City"),
+    (Sector::RogueGuild, "Rogue Guild"),
+    (Sector::Field, "Field"),
+    (Sector::Hills, "Hills"),
+    (Sector::Forest, "Forest"),
+    (Sector::Mountain, "Mountain"),
+    (Sector::Desert, "Desert"),
+    (Sector::WaterSwim, "Water (swim)"),
+    (Sector::WaterNoswim, "Water (no swim)"),
+    (Sector::Underwater, "Underwater"),
+    (Sector::OnBottom, "On Bottom"),
+    (Sector::Air, "Air"),
+];
+
+fn draw_legend(draw: &Draw) {
+    const CELL_WIDTH: f32 = 100f32;
+    const CELL_HEIGHT: f32 = 20f32;
+    for (y, (sector, sector_name)) in LEGEND_SECTORS.iter().enumerate() {
+        let xy = Vec2::new(5f32, -5f32 - (y) as f32 * (CELL_HEIGHT + 5f32));
+        let LabelColor {
+            background,
+            foreground,
+        } = color_of(*sector);
+        let cell_center: Vec2 = Vec2::new(CELL_WIDTH, CELL_HEIGHT * -1f32) * 0.5;
+        draw.xy(xy + cell_center)
+            .rect()
+            .w_h(CELL_WIDTH, CELL_HEIGHT)
+            .color(background);
+        draw.xy(xy + cell_center + 2f32)
+            .text(sector_name)
+            .w_h(CELL_WIDTH - 4f32, CELL_HEIGHT - 4f32)
+            .left_justify()
+            .color(foreground);
+    }
+}
+
 fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
     draw.background().color(WHITE);
+
+    draw_legend(&draw.xy(app.window_rect().top_left()));
 
     // Draw connections
     let mut endcap_symbol = CONNECTION_LABELS.iter().cycle();
@@ -259,27 +344,15 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .finish();
         }
 
-        let room_color = match room.sector {
-            Sector::Inside => GREEN,
-            Sector::City => GREEN,
-            Sector::Field => GREEN,
-            Sector::Forest => GREEN,
-            Sector::Hills => GREEN,
-            Sector::Mountain => GREEN,
-            Sector::WaterSwim => CYAN,
-            Sector::WaterNoswim => CYAN,
-            Sector::House => GREEN,
-            Sector::Air => WHITE,
-            Sector::Desert => GREEN,
-            Sector::Underwater => CYAN,
-            Sector::OnBottom => CYAN,
-            Sector::RogueGuild => GREEN,
-        };
+        let LabelColor {
+            background,
+            foreground,
+        } = color_of(room.sector);
 
         rdraw
             .rect()
             .w_h(model.square_size(), model.square_size())
-            .color(room_color);
+            .color(background);
         rdraw
             .rect()
             .w_h(model.square_size(), model.square_size())
@@ -287,7 +360,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .stroke(BLACK)
             .stroke_weight(2f32)
             .finish();
-        rdraw.text(&room.string_vnum).color(RED);
+        rdraw.text(&room.string_vnum).color(foreground);
     }
     draw.to_frame(app, &frame).unwrap();
 }
