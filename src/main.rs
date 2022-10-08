@@ -108,8 +108,16 @@ fn event(app: &App, model: &mut Model, event: Event) {
 }
 
 fn draw_connection(draw: &Draw, model: &Model, from: Exit, to: Exit, one_way: bool, door: bool) {
-    let from_origin = model.locations[from.index];
-    let to_origin = model.locations[to.index];
+    let mut from_origin = model.locations[from.index];
+    let mut to_origin = model.locations[to.index];
+    if let Some(offset) = model.ui.grab_offset {
+        if model.selected[from.index] {
+            from_origin += offset;
+        }
+        if model.selected[to.index] {
+            to_origin += offset;
+        }
+    }
     match (from.direction, to.direction) {
         (Direction::Up, _) | (Direction::Down, _) | (_, Direction::Up) | (_, Direction::Down) => {
             draw_disconnected_connection(draw, model, from, ConnectionEndCap::Symbol);
@@ -127,7 +135,12 @@ enum ConnectionEndCap<'a> {
 }
 
 fn draw_disconnected_connection(draw: &Draw, model: &Model, from: Exit, end_cap: ConnectionEndCap) {
-    let start = model.locations[from.index];
+    let mut start = model.locations[from.index];
+    if let Some(offset) = model.ui.grab_offset {
+        if model.selected[from.index] {
+            start += offset;
+        }
+    }
     let delta = match from.direction {
         Direction::North => Vec2::new(0f32, model.square_size()),
         Direction::East => Vec2::new(model.square_size(), 0f32),
