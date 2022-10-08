@@ -69,7 +69,12 @@ fn event(app: &App, model: &mut Model, event: Event) {
             model.ui.last_click_time = app.duration.since_start;
 
             let mut grabbed_room = None;
-            for (idx, loc) in model.locations.iter().enumerate() {
+            for (idx, &loc) in model.locations.iter().enumerate() {
+                let loc = if model.selected[idx] {
+                    loc + model.ui.grab_offset.unwrap_or(Vec2::default())
+                } else {
+                    loc
+                };
                 let half_square_size = model.square_size() * 0.5;
                 if app.mouse.x + half_square_size > loc.x
                     && app.mouse.x - half_square_size < loc.x
