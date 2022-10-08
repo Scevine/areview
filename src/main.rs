@@ -31,6 +31,17 @@ fn model(_app: &App) -> Model {
     Model::new(30f32, all_rooms, by_plane)
 }
 
+fn apply_grab(model: &mut Model) {
+    if let Some(grab_offset) = model.ui.grab_offset.take() {
+        for (location, selected) in model.locations.iter_mut().zip(&model.selected) {
+            if *selected {
+                *location += grab_offset;
+            }
+        }
+    }
+    model.ui.grab_origin = None;
+}
+
 fn event(app: &App, model: &mut Model, event: Event) {
     match event {
         Event::DeviceEvent(
@@ -62,21 +73,17 @@ fn event(app: &App, model: &mut Model, event: Event) {
 
             // Handle selecting rooms
             if let Some(room_idx) = grabbed_room {
+                if !model.selected[room_idx] {
+                    apply_grab(model);
+                }
                 model.selected[room_idx] = true;
                 if is_double_click {
                     model.select_all_in_plane(model.room_planes[room_idx]);
                 }
                 model.ui.grab_origin = Some(model.locations[room_idx]);
             } else {
-                if let Some(grab_offset) = model.ui.grab_offset.take() {
-                    for (location, selected) in model.locations.iter_mut().zip(&model.selected) {
-                        if *selected {
-                            *location += grab_offset;
-                        }
-                    }
-                }
+                apply_grab(model);
                 model.selected.fill(false);
-                model.ui.grab_origin = None;
             }
         }
         Event::DeviceEvent(
