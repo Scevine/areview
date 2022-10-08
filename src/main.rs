@@ -13,10 +13,14 @@ use nannou::winit::event::DeviceEvent;
 use parser::load_area;
 
 fn main() {
-    nannou::app(model).event(event).simple_window(view).loop_mode(LoopMode::Wait).run();
+    nannou::app(model)
+        .event(event)
+        .view(view)
+        .loop_mode(LoopMode::Wait)
+        .run();
 }
 
-fn model(_app: &App) -> Model {
+fn model(app: &App) -> Model {
     let path = std::env::args().nth(1).unwrap_or_else(|| {
         eprintln!("No path to area file supplied!");
         std::process::exit(1);
@@ -28,6 +32,12 @@ fn model(_app: &App) -> Model {
             std::process::exit(1);
         }
     };
+
+    let _ = app.new_window()
+        .title("Avatar Area Visualizer")
+        .build()
+        .unwrap();
+
     Model::new(30f32, all_rooms, by_plane)
 }
 
