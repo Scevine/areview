@@ -107,7 +107,7 @@ fn event(app: &App, model: &mut Model, event: Event) {
     }
 }
 
-fn draw_connection(draw: &Draw, model: &Model, from: Exit, to: Exit, one_way: bool, door: bool) {
+fn draw_connection(draw: &Draw, model: &Model, from: &Exit, to: &Exit, one_way: bool, door: bool) {
     let mut from_origin = model.locations[from.index];
     let mut to_origin = model.locations[to.index];
     if let Some(offset) = model.ui.grab_offset {
@@ -134,7 +134,7 @@ enum ConnectionEndCap<'a> {
     Symbol,
 }
 
-fn draw_disconnected_connection(draw: &Draw, model: &Model, from: Exit, end_cap: ConnectionEndCap) {
+fn draw_disconnected_connection(draw: &Draw, model: &Model, from: &Exit, end_cap: ConnectionEndCap) {
     let mut start = model.locations[from.index];
     if let Some(offset) = model.ui.grab_offset {
         if model.selected[from.index] {
@@ -153,7 +153,7 @@ fn draw_disconnected_connection(draw: &Draw, model: &Model, from: Exit, end_cap:
     draw.line().stroke_weight(2f32).start(start).end(end).color(BLACK);
     match end_cap {
         ConnectionEndCap::Vnum(vnum) => {
-            draw.xy(start + delta + delta * 0.5).text(vnum).color(RED); // FIXME: just have the vnums pre stringified
+            draw.xy(start + delta + delta * 0.5).text(vnum).color(RED);
         }
         ConnectionEndCap::Symbol => {
             // TODO
@@ -181,13 +181,13 @@ fn view(app: &App, model: &Model, frame: Frame) {
     for connection in &model.connections {
         match connection {
             Connection::TwoWay { from, to, door } => {
-                draw_connection(&draw, &model, *from, *to, false, *door);
+                draw_connection(&draw, &model, from, to, false, *door);
             }
             Connection::OneWay { from, to, door } => {
-                draw_connection(&draw, &model, *from, *to, true, *door);
+                draw_connection(&draw, &model, from, to, true, *door);
             }
             Connection::External { from, to, .. } => {
-                draw_disconnected_connection(&draw, &model, *from, ConnectionEndCap::Vnum(&to.to_string()));
+                draw_disconnected_connection(&draw, &model, from, ConnectionEndCap::Vnum(&to));
             }
         }
     }

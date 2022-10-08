@@ -2,14 +2,14 @@ use crate::room::{Direction, Room, Vnum};
 use fnv::FnvHashMap;
 use std::rc::Rc;
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Connection {
     TwoWay { from: Exit, to: Exit, door: bool },
     OneWay { from: Exit, to: Exit, door: bool },
-    External { from: Exit, to: Vnum, door: bool },
+    External { from: Exit, to: String, door: bool },
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Exit {
     pub direction: Direction,
     in_room: Vnum,
@@ -70,7 +70,7 @@ pub fn find_connections(
             } else {
                 Connection::External {
                     from: exit,
-                    to: *destination,
+                    to: destination.to_string(),
                     door: false, // FIXME
                 }
             };
