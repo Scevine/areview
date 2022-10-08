@@ -37,27 +37,20 @@ fn event(app: &App, model: &mut Model, event: Event) {
             },
         ) => {
             model.ui.device_pressed = Some(device_id);
-            let is_double_click = model.ui.is_double_click(device_id, app.duration.since_start);
+            let is_double_click = model
+                .ui
+                .is_double_click(device_id, app.duration.since_start);
             model.ui.last_click_device = Some(device_id);
             model.ui.last_click_time = app.duration.since_start;
 
-            // Did it encounter a location group?
-            println!(
-                "Device pressed button 1 at {:?} {:?}",
-                app.mouse.x, app.mouse.y
-            );
-
             let mut grabbed_room = None;
-            for ((idx, loc), &group) in model.locations.iter().enumerate().zip(&model.room_planes) {
-                let window_pos = model.groups[group].0 + *loc;
+            for (idx, loc) in model.locations.iter().enumerate() {
                 let half_square_size = model.square_size() * 0.5;
-                if app.mouse.x + half_square_size > window_pos.x
-                    && app.mouse.x - half_square_size < window_pos.x
-                    && app.mouse.y + half_square_size > window_pos.y
-                    && app.mouse.y - half_square_size < window_pos.y
+                if app.mouse.x + half_square_size > loc.x
+                    && app.mouse.x - half_square_size < loc.x
+                    && app.mouse.y + half_square_size > loc.y
+                    && app.mouse.y - half_square_size < loc.y
                 {
-                    let room = &model.rooms[idx];
-                    println!("room {} hit", &room.vnum);
                     grabbed_room = Some(idx);
                 }
             }
@@ -79,16 +72,13 @@ fn event(app: &App, model: &mut Model, event: Event) {
                 button: 1,
                 state: ElementState::Released,
             },
-        ) => {
-            match model.ui.device_pressed {
-                Some(id) if id == device_id => {
-                    model.ui.device_pressed = None;
-                    model.ui.grabbed = None;
-                }
-                _ => {}
+        ) => match model.ui.device_pressed {
+            Some(id) if id == device_id => {
+                model.ui.device_pressed = None;
+                model.ui.grabbed = None;
             }
-            // println!("Device released button 1");
-        }
+            _ => {}
+        },
         _ => {}
     }
 }
@@ -97,22 +87,37 @@ fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
     draw.background().color(WHITE);
 
+    draw.line()
+        .stroke_weight(2f32)
+        .start(Vec2::new(-300f32, -300f32))
+        .end(Vec2::new(300f32, 300f32))
+        .color(RED);
+
+    // DEBUG for each group
+    for plane in &model.plane_areas {
+        draw.rect()
+            .x_y(plane.x.middle(), plane.y.middle())
+            .width(plane.x.len())
+            .height(plane.y.len())
+            .no_fill()
+            .stroke(RED)
+            .stroke_weight(12f32)
+            .finish();
+    }
+
     // For each room
-    for (((room, location), &plane), &selected) in model
+    for ((room, location), &selected) in model
         .rooms
         .iter()
         .zip(&model.locations)
-        .zip(&model.room_planes)
         .zip(&model.selected)
     {
-        let plane = &model.groups[plane];
-
-        let rdraw = draw
-            .x_y(plane.0.x, plane.0.y) // translate to group's location for now
-            .x_y(location.x, location.y);
+        let rdraw = draw.x_y(location.x, location.y);
 
         if selected {
-            rdraw.rect().w_h(model.square_size(), model.square_size())
+            rdraw
+                .rect()
+                .w_h(model.square_size(), model.square_size())
                 .no_fill()
                 .stroke(nannou::color::rgb_u32(0xf04e98))
                 .stroke_weight(10f32)

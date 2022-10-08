@@ -1,6 +1,6 @@
 use crate::room::{Connection, Direction, Room, Vnum};
 use fnv::{FnvHashMap, FnvHashSet};
-use nannou::prelude::Vec2;
+use nannou::prelude::{Rect, Vec2};
 use nannou::winit::event::DeviceId;
 use std::rc::Rc;
 use std::time::Duration;
@@ -12,7 +12,7 @@ pub struct Model {
     pub locations: Vec<Vec2>,
     pub room_planes: Vec<usize>,
     pub selected: Vec<bool>,
-    pub groups: Vec<Group>,
+    pub plane_areas: Vec<Rect>,
     pub connections: FnvHashSet<Connection>,
     pub ui: Ui,
 }
@@ -24,11 +24,25 @@ impl Model {
         grouped_rooms: Vec<Vec<Rc<Room>>>,
         connections: FnvHashSet<Connection>,
     ) -> Self {
-        let grouped_locations = position_rooms(&all_rooms, grouped_rooms, square_size);
-        let mut groups: Vec<_> = grouped_locations
-            .iter()
-            .map(|(center, _)| Group(*center))
-            .collect();
+        let mut grouped_locations = position_rooms(&all_rooms, grouped_rooms, square_size);
+
+        let shift_groups_by = grouped_locations.len() as isize / 2isize;
+        for (i, (plane, locations)) in grouped_locations.iter_mut().enumerate() {
+            // temporarily arrange the groups of rooms
+            let mut pos = i as f32 - shift_groups_by as f32;
+            pos *= 150f32;
+
+            let (x, y) = plane.x_y();
+            *plane = Rect::from_xy_wh(Vec2::new(pos, pos), plane.wh());
+
+            for loc in locations {
+                loc.x += pos - x;
+                loc.y += pos - y;
+            }
+        }
+
+        let plane_areas: Vec<_> = grouped_locations.iter().map(|(area, _)| *area).collect();
+
         let mut all_locations: Vec<_> = grouped_locations
             .into_iter()
             .map(|(_, ls)| ls)
@@ -41,20 +55,13 @@ impl Model {
         let locations = all_locations.iter().map(|l| Vec2::new(l.x, l.y)).collect();
         let room_planes = all_locations.into_iter().map(|l| l.group).collect();
 
-        let shift_groups_by = groups.capacity() as isize / 2isize;
-        for (i, group) in groups.iter_mut().enumerate() {
-            let mut pos = i as f32 - shift_groups_by as f32;
-            pos *= 150f32;
-            group.0 = pos - group.0;
-        }
-
         Model {
             square_size,
             rooms,
             locations,
             room_planes,
             selected: vec![false; num_rooms],
-            groups,
+            plane_areas,
             connections,
             ..Default::default()
         }
@@ -109,7 +116,7 @@ fn position_rooms(
     all_rooms: &FnvHashMap<Vnum, Rc<Room>>,
     planes: Vec<Vec<Rc<Room>>>,
     square_size: f32,
-) -> Vec<(Vec2, Vec<Location>)> {
+) -> Vec<(Rect, Vec<Location>)> {
     planes
         .into_iter()
         .enumerate()
@@ -122,7 +129,7 @@ fn position_rooms_in_plane(
     plane: Vec<Rc<Room>>,
     square_size: f32,
     group: usize,
-) -> (Vec2, Vec<Location>) {
+) -> (Rect, Vec<Location>) {
     let mut locations: Vec<Location> = Vec::with_capacity(plane.len());
 
     let mut to_visit = std::collections::VecDeque::new();
@@ -176,7 +183,7 @@ fn position_rooms_in_plane(
         location.y *= square_size * 2.0;
     }
 
-    let center = {
+    let area = {
         let mut max = Vec2::default();
         let mut min = Vec2::default();
         for loc in &locations {
@@ -185,8 +192,18 @@ fn position_rooms_in_plane(
             min.x = min.x.min(loc.x);
             min.y = min.y.min(loc.y);
         }
-        (max + min) / 2f32
+
+        println!(
+            "zone from {:?} to {:?} ({:?}) has {} rooms",
+            min,
+            max,
+            (max + min) / 2f32,
+            locations.len()
+        );
+
+        // The rect intersects with the room centers, not their outermost edges
+        Rect::from_corners(min, max)
     };
 
-    (center, locations)
+    (area, locations)
 }
