@@ -3,7 +3,7 @@ mod model;
 mod parser;
 mod room;
 
-use crate::draw::{draw_connections, draw_legend, LabelColor};
+use crate::draw::{draw_connections, draw_legend, draw_rooms, LabelColor};
 use crate::model::Exit;
 use crate::room::Direction;
 use model::{Connection, Model};
@@ -114,47 +114,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     draw_connections(&draw, model);
 
-    // Draw rooms
-    for ((room, location), &selected) in model
-        .rooms
-        .iter()
-        .zip(&model.locations)
-        .zip(&model.selected)
-    {
-        let mut rdraw = draw.xy(*location);
-        if let Some(grab_offset) = model.ui.grab_offset {
-            if selected {
-                rdraw = rdraw.xy(grab_offset);
-            }
-        }
+    draw_rooms(&draw, model);
 
-        if selected {
-            rdraw
-                .rect()
-                .w_h(model.square_size(), model.square_size())
-                .no_fill()
-                .stroke(nannou::color::rgb_u32(0xf04e98))
-                .stroke_weight(10f32)
-                .finish();
-        }
-
-        let LabelColor {
-            background,
-            foreground,
-        } = room.sector.color();
-
-        rdraw
-            .rect()
-            .w_h(model.square_size(), model.square_size())
-            .color(background);
-        rdraw
-            .rect()
-            .w_h(model.square_size(), model.square_size())
-            .no_fill()
-            .stroke(BLACK)
-            .stroke_weight(2f32)
-            .finish();
-        rdraw.text(&room.string_vnum).color(foreground);
-    }
     draw.to_frame(app, &frame).unwrap();
 }

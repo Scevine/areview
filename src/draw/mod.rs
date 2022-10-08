@@ -1,10 +1,12 @@
 mod draw_connection;
 mod draw_legend;
+mod draw_room;
 
 use nannou::prelude::*;
 
 pub use draw_connection::draw_connections;
 pub use draw_legend::draw_legend;
+pub use draw_room::draw_rooms;
 
 pub struct LabelColor {
     pub background: Rgb8,
