@@ -2,7 +2,7 @@ mod model;
 mod parser;
 mod room;
 
-use model::Model;
+use model::{Connection, Model};
 use nannou::event::ElementState;
 use nannou::prelude::*;
 use nannou::winit::event::DeviceEvent;
@@ -100,7 +100,19 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .finish();
     }
 
-    // For each room
+    // Draw connections
+    for connection in &model.connections {
+        match connection {
+            Connection::TwoWay { from, to, door } => {
+                let from_room = model.locations[from.index];
+                let to_room = model.locations[to.index];
+                draw.line().start(from_room).end(to_room);
+            }
+            _ => {}
+        }
+    }
+
+    // Draw rooms
     for ((room, location), &selected) in model
         .rooms
         .iter()

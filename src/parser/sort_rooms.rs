@@ -1,4 +1,4 @@
-use crate::room::{Connection, Direction, Room, Vnum};
+use crate::room::{Direction, Room, SimpleConnection, Vnum};
 use fnv::{FnvHashMap, FnvHashSet};
 use std::rc::Rc;
 
@@ -7,7 +7,7 @@ pub fn sort_rooms(
 ) -> (
     FnvHashMap<Vnum, Rc<Room>>,
     Vec<Vec<Rc<Room>>>,
-    FnvHashSet<Connection>,
+    FnvHashSet<SimpleConnection>,
 ) {
     let mut rooms: Vec<_> = rooms.into_iter().map(|r| Rc::new(r)).collect();
     let hash: FnvHashMap<Vnum, Rc<Room>> =
@@ -19,7 +19,7 @@ pub fn sort_rooms(
 fn find_rooms_in_plane(
     room: Option<Rc<Room>>,
     left_to_visit: &mut Vec<Rc<Room>>,
-) -> (Vec<Vec<Rc<Room>>>, FnvHashSet<Connection>) {
+) -> (Vec<Vec<Rc<Room>>>, FnvHashSet<SimpleConnection>) {
     let mut this_plane = vec![];
     let mut connections = FnvHashSet::default();
 
@@ -37,7 +37,7 @@ fn find_rooms_in_plane(
         this_plane.push(room.clone());
 
         for (dir, dest) in &room.exits {
-            connections.insert(Connection(room.vnum, *dest));
+            connections.insert(SimpleConnection(room.vnum, *dest));
 
             // Find the connected room
             if let Some(dest_room) = left_to_visit.iter().find(|r| r.vnum == *dest).cloned() {

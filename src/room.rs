@@ -10,6 +10,20 @@ pub enum Direction {
     Down,
 }
 
+impl Direction {
+    pub fn opposite(&self) -> Direction {
+        use Direction::*;
+        match self {
+            North => South,
+            East => West,
+            South => North,
+            West => East,
+            Up => Down,
+            Down => Up,
+        }
+    }
+}
+
 pub type Vnum = u32;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,9 +37,9 @@ pub struct Room {
 }
 
 #[derive(Debug, Copy, Clone, Eq, Hash)]
-pub struct Connection(pub Vnum, pub Vnum);
+pub struct SimpleConnection(pub Vnum, pub Vnum);
 
-impl PartialEq for Connection {
+impl PartialEq for SimpleConnection {
     fn eq(&self, other: &Self) -> bool {
         (self.0 == other.0 && self.1 == other.1) || (self.0 == other.1 && self.1 == other.0)
     }

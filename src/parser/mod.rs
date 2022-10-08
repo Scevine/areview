@@ -1,7 +1,7 @@
 mod parse_rooms;
 mod sort_rooms;
 
-use crate::room::{Connection, Room, Vnum};
+use crate::room::{Room, SimpleConnection, Vnum};
 use fnv::{FnvHashMap, FnvHashSet};
 use std::error::Error;
 use std::path::Path;
@@ -13,7 +13,7 @@ pub fn load_area(
     (
         FnvHashMap<Vnum, Rc<Room>>,
         Vec<Vec<Rc<Room>>>,
-        FnvHashSet<Connection>,
+        FnvHashSet<SimpleConnection>,
     ),
     Box<dyn Error>,
 > {
