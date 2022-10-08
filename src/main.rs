@@ -116,20 +116,15 @@ fn draw_connection(draw: &Draw, model: &Model, from: &Exit, to: &Exit, one_way: 
             to_origin += offset;
         }
     }
-    match (from.direction, to.direction) {
-        (Direction::Up, _) | (Direction::Down, _) | (_, Direction::Up) | (_, Direction::Down) => {
-            draw_disconnected_connection(draw, model, from, ConnectionEndCap::Symbol);
-            draw_disconnected_connection(draw, model, to, ConnectionEndCap::Symbol);
-        }
-        _ => {
-            draw.line().stroke_weight(2f32).start(from_origin).end(to_origin);
-        }
-    }
+    draw.line()
+        .stroke_weight(2f32)
+        .start(from_origin)
+        .end(to_origin);
 }
 
 enum ConnectionEndCap<'a> {
     Vnum(&'a str),
-    Symbol,
+    Symbol(&'a str),
 }
 
 fn draw_disconnected_connection(
@@ -162,24 +157,77 @@ fn draw_disconnected_connection(
         ConnectionEndCap::Vnum(vnum) => {
             draw.xy(start + delta + delta * 0.5).text(vnum).color(RED);
         }
-        ConnectionEndCap::Symbol => {
-            // TODO
+        ConnectionEndCap::Symbol(label) => {
+            let draw = draw.xy(start + delta);
+            draw.ellipse()
+                .radius(model.square_size() * 0.25)
+                .stroke(BLACK)
+                .stroke_weight(2f32)
+                .finish();
+            draw.text(label).color(BLACK);
         }
     }
 }
+
+fn is_updown_connection(left: &Exit, right: &Exit) -> bool {
+    match (left.direction, right.direction) {
+        (Direction::Up, _) | (Direction::Down, _) | (_, Direction::Up) | (_, Direction::Down) => {
+            true
+        }
+        _ => false,
+    }
+}
+
+const CONNECTION_LABELS: &'static [&'static str] = &[
+    "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S",
+    "T", "U", "V", "W", "Z", "Y", "Z", "Γ", "Δ", "Θ", "Λ", "Ξ", "Π", "Σ", "Φ", "Ψ", "Ω",
+];
 
 fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
     draw.background().color(WHITE);
 
     // Draw connections
+    let mut endcap_symbol = CONNECTION_LABELS.iter().cycle();
     for connection in &model.connections {
         match connection {
             Connection::TwoWay { from, to, door } => {
-                draw_connection(&draw, &model, from, to, false, *door);
+                if is_updown_connection(from, to) {
+                    let symbol = endcap_symbol.next().unwrap();
+                    draw_disconnected_connection(
+                        &draw,
+                        model,
+                        from,
+                        ConnectionEndCap::Symbol(symbol),
+                    );
+                    draw_disconnected_connection(
+                        &draw,
+                        model,
+                        to,
+                        ConnectionEndCap::Symbol(symbol),
+                    );
+                } else {
+                    draw_connection(&draw, &model, from, to, false, *door);
+                }
             }
             Connection::OneWay { from, to, door } => {
-                draw_connection(&draw, &model, from, to, true, *door);
+                if is_updown_connection(from, to) {
+                    let symbol = endcap_symbol.next().unwrap();
+                    draw_disconnected_connection(
+                        &draw,
+                        model,
+                        from,
+                        ConnectionEndCap::Symbol(symbol),
+                    );
+                    draw_disconnected_connection(
+                        &draw,
+                        model,
+                        to,
+                        ConnectionEndCap::Symbol(symbol),
+                    );
+                } else {
+                    draw_connection(&draw, &model, from, to, true, *door);
+                }
             }
             Connection::External { from, to, .. } => {
                 draw_disconnected_connection(&draw, &model, from, ConnectionEndCap::Vnum(&to));
