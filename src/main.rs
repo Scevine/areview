@@ -18,14 +18,14 @@ fn model(_app: &App) -> Model {
         eprintln!("No path to area file supplied!");
         std::process::exit(1);
     });
-    let (all_rooms, by_plane, connections) = match load_area(&path) {
+    let (all_rooms, by_plane) = match load_area(&path) {
         Ok(rooms) => rooms,
         Err(e) => {
             eprintln!("{e}");
             std::process::exit(1);
         }
     };
-    Model::new(30f32, all_rooms, by_plane, connections)
+    Model::new(30f32, all_rooms, by_plane)
 }
 
 fn event(app: &App, model: &mut Model, event: Event) {

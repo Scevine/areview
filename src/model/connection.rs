@@ -1,5 +1,5 @@
 use crate::room::{Direction, Room, Vnum};
-use fnv::{FnvHashMap, FnvHashSet};
+use fnv::FnvHashMap;
 use std::rc::Rc;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]

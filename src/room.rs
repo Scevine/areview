@@ -36,15 +36,6 @@ pub struct Room {
     // pub cursed: boolean,
 }
 
-#[derive(Debug, Copy, Clone, Eq, Hash)]
-pub struct SimpleConnection(pub Vnum, pub Vnum);
-
-impl PartialEq for SimpleConnection {
-    fn eq(&self, other: &Self) -> bool {
-        (self.0 == other.0 && self.1 == other.1) || (self.0 == other.1 && self.1 == other.0)
-    }
-}
-
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Sector {
     Inside,
