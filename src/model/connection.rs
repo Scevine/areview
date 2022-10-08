@@ -79,31 +79,5 @@ pub fn find_connections(
         }
     }
 
-    // for connection in simple_connections {
-    //     if let Some(room) = rooms.get(&connection.0) {
-    //         connections.push(find_connection(
-    //             room,
-    //             connection.1,
-    //             rooms.get(&connection.1),
-    //         ));
-    //     } else if let Some(room) = rooms.get(&connection.1) {
-    //         connections.push(find_connection(
-    //             room,
-    //             connection.0,
-    //             rooms.get(&connection.0),
-    //         ));
-    //     } else {
-    //         eprintln!("Connection {:?} ignored: neither rooms found", connection);
-    //     }
-    // }
-
     connections
 }
-
-// fn find_connection(from: &Room, to_vnum: Vnum, to: Option<&Rc<Room>>) -> Connection {
-//     if let Some(dest) = to {
-//
-//     } else {
-//         Connection::External { from: from.vnum, to: to_vnum }
-//     }
-// }
