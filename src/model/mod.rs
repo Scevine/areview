@@ -33,7 +33,7 @@ impl Model {
             pos *= 150f32;
 
             let (x, y) = plane.x_y();
-            *plane = Rect::from_xy_wh(Vec2::new(pos, pos), plane.wh());
+            *plane = Rect::from_xy_wh(Vec2::new(pos, pos), plane.wh() + square_size);
 
             for loc in locations {
                 loc.x += pos - x;
@@ -108,9 +108,6 @@ struct Location {
     room: Rc<Room>,
     group: usize,
 }
-
-#[derive(Debug, Clone, Default)]
-pub struct Group(pub Vec2);
 
 fn position_rooms(
     all_rooms: &FnvHashMap<Vnum, Rc<Room>>,
@@ -192,14 +189,6 @@ fn position_rooms_in_plane(
             min.x = min.x.min(loc.x);
             min.y = min.y.min(loc.y);
         }
-
-        println!(
-            "zone from {:?} to {:?} ({:?}) has {} rooms",
-            min,
-            max,
-            (max + min) / 2f32,
-            locations.len()
-        );
 
         // The rect intersects with the room centers, not their outermost edges
         Rect::from_corners(min, max)

@@ -87,12 +87,6 @@ fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
     draw.background().color(WHITE);
 
-    draw.line()
-        .stroke_weight(2f32)
-        .start(Vec2::new(-300f32, -300f32))
-        .end(Vec2::new(300f32, 300f32))
-        .color(RED);
-
     // DEBUG for each group
     for plane in &model.plane_areas {
         draw.rect()
@@ -101,7 +95,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .height(plane.y.len())
             .no_fill()
             .stroke(RED)
-            .stroke_weight(12f32)
+            .stroke_weight(2f32)
             .finish();
     }
 
@@ -112,7 +106,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
         .zip(&model.locations)
         .zip(&model.selected)
     {
-        let rdraw = draw.x_y(location.x, location.y);
+        let rdraw = draw.xy(*location);
 
         if selected {
             rdraw
