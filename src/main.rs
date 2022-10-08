@@ -103,8 +103,18 @@ fn event(app: &App, model: &mut Model, event: Event) {
             if let Some(id) = model.ui.device_pressed {
                 if id == device_id {
                     if let Some(grab_origin) = model.ui.grab_origin {
-                        model.ui.grab_offset =
-                            Some(Vec2::new(app.mouse.x, app.mouse.y) - grab_origin);
+                        let mut offset = Vec2::new(app.mouse.x, app.mouse.y) - grab_origin;
+                        // TODO: apply restrict_axis immediately when shift is pressed/released too, not just on mouse move
+                        let restrict_axis = app.keys.mods.shift();
+                        if restrict_axis {
+                            let closer_to_x_axis = f32::abs(offset.x) < f32::abs(offset.y);
+                            if closer_to_x_axis {
+                                offset.x = 0f32;
+                            } else {
+                                offset.y = 0f32;
+                            }
+                        }
+                        model.ui.grab_offset = Some(offset);
                     }
                 }
             }
