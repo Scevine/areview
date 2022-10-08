@@ -1,4 +1,6 @@
+use crate::LabelColor;
 use fnv::FnvHashMap;
+use nannou::color::named::*;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Direction {
@@ -74,6 +76,28 @@ impl Sector {
             "12" => OnBottom,
             "13" => RogueGuild,
             _ => Inside,
+        }
+    }
+
+    pub fn color(&self) -> LabelColor {
+        match self {
+            Sector::Inside => LabelColor::light(GAINSBORO),
+            Sector::House => LabelColor::light(BISQUE),
+            Sector::City => LabelColor::light(DARKGRAY),
+            Sector::RogueGuild => LabelColor::dark(DARKSLATEGRAY),
+
+            Sector::Field => LabelColor::light(LIGHTGREEN),
+            Sector::Hills => LabelColor::light(MEDIUMSEAGREEN),
+            Sector::Forest => LabelColor::dark(SEAGREEN),
+            Sector::Mountain => LabelColor::dark(OLIVEDRAB),
+            Sector::Desert => LabelColor::dark(OLIVE),
+
+            Sector::WaterSwim => LabelColor::light(SKYBLUE),
+            Sector::WaterNoswim => LabelColor::light(DEEPSKYBLUE),
+            Sector::Underwater => LabelColor::dark(ROYALBLUE),
+            Sector::OnBottom => LabelColor::dark(MEDIUMBLUE),
+
+            Sector::Air => LabelColor::light(ALICEBLUE),
         }
     }
 }
