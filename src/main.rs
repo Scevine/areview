@@ -13,7 +13,7 @@ use nannou::winit::event::DeviceEvent;
 use parser::load_area;
 
 fn main() {
-    nannou::app(model).event(event).simple_window(view).run();
+    nannou::app(model).event(event).simple_window(view).loop_mode(LoopMode::Wait).run();
 }
 
 fn model(_app: &App) -> Model {
