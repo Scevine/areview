@@ -104,6 +104,7 @@ fn event(app: &App, model: &mut Model, event: Event) {
                         apply_grab(model);
                         model.selected[room_idx] = true;
                     }
+                    model.recalculate_guides();
                 } else {
                     // If not holding ctrl, select only one at a time
                     // But also don't clear selection if clicked room is already selected
@@ -111,17 +112,20 @@ fn event(app: &App, model: &mut Model, event: Event) {
                         apply_grab(model);
                         model.selected.fill(false);
                         model.selected[room_idx] = true;
+                        model.recalculate_guides();
                     }
                 }
 
                 if is_double_click {
                     model.select_all_in_plane(model.room_planes[room_idx]);
+                    model.recalculate_guides();
                 }
                 model.ui.grab_origin = Some(model.locations[room_idx]);
             } else {
                 if !app.keys.mods.ctrl() {
                     apply_grab(model);
                     model.selected.fill(false);
+                    model.clear_guides();
                 }
             }
         }
@@ -179,9 +183,22 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     draw_legend(&draw.xy(app.window_rect().top_left()), &model.sectors);
 
+    draw_guides(&draw, model, app.window_rect());
+
     draw_connections(&draw, model);
 
     draw_rooms(&draw, model);
 
     draw.to_frame(app, &frame).unwrap();
+}
+
+fn draw_guides(draw: &Draw, model: &Model, window: Rect) {
+    if let Some(snap_to) = &model.ui.guides {
+        for &x in &snap_to.xs {
+            draw.line().start(Vec2::new(x, window.top())).end(Vec2::new(x, window.bottom())).color(RED);
+        }
+        for &y in &snap_to.ys {
+            draw.line().start(Vec2::new(window.left(), y)).end(Vec2::new(window.right(), y)).color(RED);
+        }
+    }
 }

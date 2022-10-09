@@ -11,7 +11,7 @@ use position_rooms::position_rooms;
 use std::rc::Rc;
 use std::time::Duration;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct Model {
     square_size: f32,
     pub rooms: Vec<Room>,
@@ -77,9 +77,30 @@ impl Model {
             }
         }
     }
+
+    pub fn recalculate_guides(&mut self) {
+        let locations: Vec<_> = self.locations.iter().zip(&self.selected).filter_map(|(loc, selected)| {
+            if *selected {
+                None
+            } else {
+                Some(loc)
+            }
+        }).collect();
+        let mut xs = Vec::with_capacity(locations.len());
+        let mut ys = Vec::with_capacity(locations.len());
+        for loc in locations {
+            if !xs.contains(&loc.x) { xs.push(loc.x) }
+            if !ys.contains(&loc.y) { ys.push(loc.y) }
+        }
+        self.ui.guides = Some(SnapTo { xs, ys });
+    }
+
+    pub fn clear_guides(&mut self) {
+        self.ui.guides = None;
+    }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct Ui {
     pub device_pressed: Option<DeviceId>,
     pub grabbed: Option<usize>,
@@ -87,6 +108,7 @@ pub struct Ui {
     pub grab_offset: Option<Vec2>,
     pub last_click_device: Option<DeviceId>,
     pub last_click_time: Duration,
+    pub guides: Option<SnapTo>,
 }
 
 const DOUBLE_CLICK_THRESHOLD: Duration = Duration::from_millis(250);
@@ -99,4 +121,10 @@ impl Ui {
             false
         }
     }
+}
+
+#[derive(Debug)]
+pub struct SnapTo {
+    pub xs: Vec<f32>,
+    pub ys: Vec<f32>,
 }
