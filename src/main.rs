@@ -156,8 +156,11 @@ fn event(app: &App, model: &mut Model, event: Event) {
         Event::DeviceEvent(device_id, DeviceEvent::MouseMotion { .. }) => {
             if let Some(id) = model.ui.device_pressed {
                 if id == device_id {
+                    // If we're grabbin', set the grab offset
                     if let Some(grab_origin) = model.ui.grab_origin {
                         let mut offset = Vec2::new(app.mouse.x, app.mouse.y) - grab_origin;
+
+                        // Restrict axis movement X or Y (whichever is closest to current pos) when shift is pressed
                         // TODO: apply restrict_axis immediately when shift is pressed/released too, not just on mouse move
                         let restrict_axis = app.keys.mods.shift();
                         if restrict_axis {
@@ -168,6 +171,19 @@ fn event(app: &App, model: &mut Model, event: Event) {
                                 offset.y = 0f32;
                             }
                         }
+
+                        // Snap to closest guide when current pos is within range
+                        if let Some(guide) = find_closest_guide(model) {
+                            match guide {
+                                Guide::X { x, dist } => if f32::abs(dist) < 10f32 {
+                                    offset.x = x - grab_origin.x;
+                                }
+                                Guide::Y { y, dist } => if f32::abs(dist) < 10f32 {
+                                    offset.y = y - grab_origin.y;
+                                }
+                            }
+                        }
+
                         model.ui.grab_offset = Some(offset);
                     }
                 }
@@ -183,7 +199,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     draw_legend(&draw.xy(app.window_rect().top_left()), &model.sectors);
 
-    draw_guides(&draw, model, app.window_rect());
+    draw_closest_guide(&draw, model, app.window_rect());
 
     draw_connections(&draw, model);
 
@@ -192,7 +208,12 @@ fn view(app: &App, model: &Model, frame: Frame) {
     draw.to_frame(app, &frame).unwrap();
 }
 
-fn draw_guides(draw: &Draw, model: &Model, window: Rect) -> Option<()> {
+enum Guide {
+    X { x: f32, dist: f32 },
+    Y { y: f32, dist: f32 },
+}
+
+fn find_closest_guide(model: &Model) -> Option<Guide> {
     let grabbed = location_of(model, model.ui.grabbed?);
     let snap_to = model.ui.guides.as_ref()?;
 
@@ -201,8 +222,8 @@ fn draw_guides(draw: &Draw, model: &Model, window: Rect) -> Option<()> {
             .xs
             .iter()
             .fold((f32::INFINITY, f32::INFINITY), |closest, x| {
-                let dist = f32::abs(grabbed.x - x);
-                if dist < closest.1 {
+                let dist = grabbed.x - x;
+                if f32::abs(dist) < f32::abs(closest.1) {
                     (*x, dist)
                 } else {
                     closest
@@ -213,25 +234,40 @@ fn draw_guides(draw: &Draw, model: &Model, window: Rect) -> Option<()> {
             .ys
             .iter()
             .fold((f32::INFINITY, f32::INFINITY), |closest, y| {
-                let dist = f32::abs(grabbed.y - y);
-                if dist < closest.1 {
+                let dist = grabbed.y - y;
+                if f32::abs(dist) < f32::abs(closest.1) {
                     (*y, dist)
                 } else {
                     closest
                 }
             });
-
     if dist_x < dist_y {
-        draw.line()
-            .start(Vec2::new(closest_x, window.top()))
-            .end(Vec2::new(closest_x, window.bottom()))
-            .color(RED);
+        Some(Guide::X {
+            x: closest_x,
+            dist: dist_x,
+        })
     } else {
-        draw.line()
-            .start(Vec2::new(window.left(), closest_y))
-            .end(Vec2::new(window.right(), closest_y))
-            .color(RED);
+        Some(Guide::Y {
+            y: closest_y,
+            dist: dist_y,
+        })
     }
+}
 
-    Some(())
+fn draw_closest_guide(draw: &Draw, model: &Model, window: Rect) {
+    match find_closest_guide(model) {
+        Some(Guide::X { x, .. }) => {
+            draw.line()
+                .start(Vec2::new(x, window.top()))
+                .end(Vec2::new(x, window.bottom()))
+                .color(RED);
+        }
+        Some(Guide::Y { y, .. }) => {
+            draw.line()
+                .start(Vec2::new(window.left(), y))
+                .end(Vec2::new(window.right(), y))
+                .color(RED);
+        }
+        None => {}
+    }
 }
