@@ -3,7 +3,7 @@ mod model;
 mod parser;
 mod room;
 
-use crate::draw::{draw_connections, draw_legend, draw_rooms, LabelColor};
+use crate::draw::{draw_connections, draw_legend, draw_rooms, location_of, LabelColor};
 use crate::model::Exit;
 use crate::room::Direction;
 use model::{Connection, Model};
@@ -192,13 +192,46 @@ fn view(app: &App, model: &Model, frame: Frame) {
     draw.to_frame(app, &frame).unwrap();
 }
 
-fn draw_guides(draw: &Draw, model: &Model, window: Rect) {
-    if let Some(snap_to) = &model.ui.guides {
-        for &x in &snap_to.xs {
-            draw.line().start(Vec2::new(x, window.top())).end(Vec2::new(x, window.bottom())).color(RED);
-        }
-        for &y in &snap_to.ys {
-            draw.line().start(Vec2::new(window.left(), y)).end(Vec2::new(window.right(), y)).color(RED);
-        }
+fn draw_guides(draw: &Draw, model: &Model, window: Rect) -> Option<()> {
+    let grabbed = location_of(model, model.ui.grabbed?);
+    let snap_to = model.ui.guides.as_ref()?;
+
+    let (closest_x, dist_x) =
+        snap_to
+            .xs
+            .iter()
+            .fold((f32::INFINITY, f32::INFINITY), |closest, x| {
+                let dist = f32::abs(grabbed.x - x);
+                if dist < closest.1 {
+                    (*x, dist)
+                } else {
+                    closest
+                }
+            });
+    let (closest_y, dist_y) =
+        snap_to
+            .ys
+            .iter()
+            .fold((f32::INFINITY, f32::INFINITY), |closest, y| {
+                let dist = f32::abs(grabbed.y - y);
+                if dist < closest.1 {
+                    (*y, dist)
+                } else {
+                    closest
+                }
+            });
+
+    if dist_x < dist_y {
+        draw.line()
+            .start(Vec2::new(closest_x, window.top()))
+            .end(Vec2::new(closest_x, window.bottom()))
+            .color(RED);
+    } else {
+        draw.line()
+            .start(Vec2::new(window.left(), closest_y))
+            .end(Vec2::new(window.right(), closest_y))
+            .color(RED);
     }
+
+    Some(())
 }

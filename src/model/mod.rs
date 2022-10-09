@@ -79,18 +79,21 @@ impl Model {
     }
 
     pub fn recalculate_guides(&mut self) {
-        let locations: Vec<_> = self.locations.iter().zip(&self.selected).filter_map(|(loc, selected)| {
-            if *selected {
-                None
-            } else {
-                Some(loc)
-            }
-        }).collect();
+        let locations: Vec<_> = self
+            .locations
+            .iter()
+            .zip(&self.selected)
+            .filter_map(|(loc, selected)| if *selected { None } else { Some(loc) })
+            .collect();
         let mut xs = Vec::with_capacity(locations.len());
         let mut ys = Vec::with_capacity(locations.len());
         for loc in locations {
-            if !xs.contains(&loc.x) { xs.push(loc.x) }
-            if !ys.contains(&loc.y) { ys.push(loc.y) }
+            if !xs.contains(&loc.x) {
+                xs.push(loc.x)
+            }
+            if !ys.contains(&loc.y) {
+                ys.push(loc.y)
+            }
         }
         self.ui.guides = Some(SnapTo { xs, ys });
     }
