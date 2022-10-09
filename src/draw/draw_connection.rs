@@ -51,6 +51,9 @@ fn draw_external_connection(draw: &Draw, model: &Model, exit: &Exit, text: &str,
     let delta = p2 - p1;
     draw.line().stroke_weight(2f32).start(p1).end(p2);
     draw.xy(p2 + delta * 0.5).text(text).color(RED);
+    if let Door::Closed = door {
+        draw_perpendicular_line_between(draw, p1, p2);
+    }
 }
 
 fn draw_door_between(draw: &Draw, f0: Vec2, f1: Vec2, t0: Vec2, t1: Vec2) {
