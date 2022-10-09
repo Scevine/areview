@@ -14,7 +14,7 @@ pub fn draw_connections(draw: &Draw, model: &Model) {
             Connection::TwoWay { from, to, door } => {
                 if is_updown_connection(from, to) {
                     let symbol = endcap_symbol.next().unwrap();
-                    draw_disconnected_connection(draw, model, from, to, symbol);
+                    draw_disconnected_connection(draw, model, from, to, symbol, *door);
                 } else {
                     draw_connection(&draw, &model, from, to, false, *door);
                 }
@@ -22,13 +22,13 @@ pub fn draw_connections(draw: &Draw, model: &Model) {
             Connection::OneWay { from, to, door } => {
                 if is_updown_connection(from, to) {
                     let symbol = endcap_symbol.next().unwrap();
-                    draw_disconnected_connection(draw, model, from, to, symbol);
+                    draw_disconnected_connection(draw, model, from, to, symbol, *door);
                 } else {
                     draw_connection(&draw, &model, from, to, true, *door);
                 }
             }
-            Connection::External { from, to, .. } => {
-                draw_external_connection(&draw, &model, from, &to);
+            Connection::External { from, to, door } => {
+                draw_external_connection(&draw, &model, from, &to, *door);
             }
         }
     }
@@ -42,23 +42,36 @@ fn draw_connection(draw: &Draw, model: &Model, from: &Exit, to: &Exit, one_way: 
         .join_round()
         .points(vec![p1, p2, p3, p4]);
     if let Door::Closed = door {
-        let middle_of_connection = (p3 + p2) * 0.5;
-        draw.xy(middle_of_connection)
-            .ellipse()
-            .radius(5f32)
-            .color(BLACK)
-            .finish();
+        draw_door_between(draw, p2, p3);
     }
 }
 
-fn draw_external_connection(draw: &Draw, model: &Model, exit: &Exit, text: &str) {
+fn draw_external_connection(draw: &Draw, model: &Model, exit: &Exit, text: &str, door: Door) {
     let (p1, p2) = find_exit(model, exit, Lean::None);
     let delta = p2 - p1;
     draw.line().stroke_weight(2f32).start(p1).end(p2);
     draw.xy(p2 + delta * 0.5).text(text).color(RED);
 }
 
-fn draw_disconnected_connection(draw: &Draw, model: &Model, from: &Exit, to: &Exit, label: &str) {
+fn draw_door_between(draw: &Draw, p1: Vec2, p2: Vec2) {
+    let middle = (p1 + p2) * 0.5;
+    let delta = p2 - p1;
+    let inverted = Vec2::new(delta.y, delta.x * -1f32).normalize_or_zero() * 10f32;
+    draw.line()
+        .stroke_weight(2f32)
+        .start(middle - inverted)
+        .end(middle + inverted)
+        .finish();
+}
+
+fn draw_disconnected_connection(
+    draw: &Draw,
+    model: &Model,
+    from: &Exit,
+    to: &Exit,
+    label: &str,
+    door: Door,
+) {
     let x1 = location_of(model, from.index).x;
     let x2 = location_of(model, to.index).x;
 
@@ -81,6 +94,11 @@ fn draw_disconnected_connection(draw: &Draw, model: &Model, from: &Exit, to: &Ex
         .stroke_weight(2f32)
         .finish();
     draw.xy(p4).text(label).color(BLACK);
+
+    if let Door::Closed = door {
+        draw_door_between(draw, p1, p2);
+        draw_door_between(draw, p4, p3);
+    }
 }
 
 enum Lean {
