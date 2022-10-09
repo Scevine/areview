@@ -1,10 +1,10 @@
 mod connection;
 mod position_rooms;
 
-use crate::room::{Room, Vnum};
+use crate::room::{Room, Sector, Vnum};
 use connection::find_connections;
 pub use connection::{Connection, Exit};
-use fnv::FnvHashMap;
+use fnv::{FnvHashMap, FnvHashSet};
 use nannou::prelude::{Rect, Vec2};
 use nannou::winit::event::DeviceId;
 use position_rooms::position_rooms;
@@ -19,6 +19,7 @@ pub struct Model {
     pub room_planes: Vec<usize>,
     pub selected: Vec<bool>,
     pub plane_areas: Vec<Rect>,
+    pub sectors: Vec<Sector>,
     pub connections: Vec<Connection>,
     pub ui: Ui,
 }
@@ -33,6 +34,12 @@ impl Model {
 
         let num_rooms = all_locations.len();
 
+        let sectors = all_locations
+            .iter()
+            .map(|l| l.room.sector)
+            .collect::<FnvHashSet<Sector>>()
+            .into_iter()
+            .collect();
         let rooms: Vec<_> = all_locations.iter().map(|l| (*l.room).clone()).collect();
         let locations = all_locations.iter().map(|l| Vec2::new(l.x, l.y)).collect();
         let room_planes = all_locations.into_iter().map(|l| l.group).collect();
@@ -45,8 +52,6 @@ impl Model {
 
         let connections = find_connections(&all_rooms, indexes_by_vnums);
 
-        // println!("{:#?}", &connections);
-
         Model {
             square_size,
             rooms,
@@ -54,6 +59,7 @@ impl Model {
             room_planes,
             selected: vec![false; num_rooms],
             plane_areas,
+            sectors,
             connections,
             ..Default::default()
         }

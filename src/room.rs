@@ -39,7 +39,7 @@ pub struct Room {
     // pub cursed: boolean,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Sector {
     Inside,
     City,

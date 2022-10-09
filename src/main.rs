@@ -142,7 +142,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
     draw.background().color(WHITE);
 
-    draw_legend(&draw.xy(app.window_rect().top_left()));
+    draw_legend(&draw.xy(app.window_rect().top_left()), &model.sectors);
 
     draw_connections(&draw, model);
 

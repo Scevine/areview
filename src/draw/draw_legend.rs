@@ -20,10 +20,14 @@ const LEGEND_SECTORS: &'static [(Sector, &'static str)] = &[
     (Sector::Air, "Air"),
 ];
 
-pub fn draw_legend(draw: &Draw) {
+pub fn draw_legend(draw: &Draw, sectors: &[Sector]) {
     const CELL_WIDTH: f32 = 100f32;
     const CELL_HEIGHT: f32 = 20f32;
-    for (y, (sector, sector_name)) in LEGEND_SECTORS.iter().enumerate() {
+    for (y, (sector, sector_name)) in LEGEND_SECTORS
+        .iter()
+        .filter(|(s, _)| sectors.contains(s))
+        .enumerate()
+    {
         let xy = Vec2::new(5f32, -5f32 - (y) as f32 * (CELL_HEIGHT + 5f32));
         let LabelColor {
             background,
