@@ -65,7 +65,7 @@ fn position_rooms_in_plane(
     });
     while !to_visit.is_empty() {
         let loc = to_visit.pop_front().unwrap();
-        for (dir, vnum) in &loc.room.exits {
+        for (dir, (vnum, _)) in &loc.room.exits {
             if to_visit.iter().any(|l| l.room.vnum == *vnum) {
                 continue;
             }

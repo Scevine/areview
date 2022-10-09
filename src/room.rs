@@ -26,6 +26,21 @@ impl Direction {
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Door {
+    None,
+    Closed,
+}
+
+impl Door {
+    pub fn or(&self, other: &Door) -> Door {
+        match (self, other) {
+            (Door::None, Door::None) => Door::None,
+            _ => Door::Closed,
+        }
+    }
+}
+
 pub type Vnum = u32;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -33,7 +48,7 @@ pub struct Room {
     pub name: String,
     pub vnum: Vnum,
     pub string_vnum: String,
-    pub exits: FnvHashMap<Direction, Vnum>,
+    pub exits: FnvHashMap<Direction, (Vnum, Door)>,
     pub sector: Sector,
     // pub safe: boolean,
     // pub cursed: boolean,

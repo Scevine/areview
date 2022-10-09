@@ -29,7 +29,7 @@ fn find_rooms_in_plane(
         let room = queue.pop_front().unwrap();
         this_plane.push(room.clone());
 
-        for (dir, dest) in &room.exits {
+        for (dir, (dest, _)) in &room.exits {
             // Find the connected room
             if let Some(dest_room) = left_to_visit.iter().find(|r| r.vnum == *dest).cloned() {
                 // Should not be possible unless `left_to_visit` contained duplicate VNUMs

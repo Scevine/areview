@@ -1,5 +1,6 @@
 use crate::{Connection, Direction, Exit, Model};
 use nannou::prelude::*;
+use crate::room::Door;
 
 const CONNECTION_LABELS: &'static [&'static str] = &[
     "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S",
@@ -33,13 +34,17 @@ pub fn draw_connections(draw: &Draw, model: &Model) {
     }
 }
 
-fn draw_connection(draw: &Draw, model: &Model, from: &Exit, to: &Exit, one_way: bool, door: bool) {
+fn draw_connection(draw: &Draw, model: &Model, from: &Exit, to: &Exit, one_way: bool, door: Door) {
     let (p1, p2) = find_exit(draw, model, from, Lean::None);
     let (p4, p3) = find_exit(draw, model, to, Lean::None);
     draw.polyline()
         .weight(2f32)
         .join_round()
         .points(vec![p1, p2, p3, p4]);
+    if let Door::Closed = door {
+        let middle_of_connection = (p3 + p2) * 0.5;
+        draw.xy(middle_of_connection).ellipse().radius(5f32).color(BLACK).finish();
+    }
 }
 
 fn draw_external_connection(draw: &Draw, model: &Model, exit: &Exit, text: &str) {

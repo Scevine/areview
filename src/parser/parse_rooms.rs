@@ -1,4 +1,4 @@
-use crate::room::{Direction, Room, Sector, Vnum};
+use crate::room::{Direction, Door, Room, Sector, Vnum};
 use fnv::FnvHashMap;
 use once_cell::sync::Lazy;
 use regex::{Captures, Match, Regex};
@@ -139,7 +139,7 @@ static DOOR_REGEX: Lazy<Regex> = Lazy::new(|| {
     .unwrap()
 });
 
-fn parse_doors(room_vnum: Vnum, text: &str) -> FnvHashMap<Direction, Vnum> {
+fn parse_doors(room_vnum: Vnum, text: &str) -> FnvHashMap<Direction, (Vnum, Door)> {
     let mut exits = FnvHashMap::default();
 
     for captures in DOOR_REGEX.captures_iter(text) {
@@ -164,7 +164,7 @@ fn parse_doors(room_vnum: Vnum, text: &str) -> FnvHashMap<Direction, Vnum> {
 fn parse_door<'a>(
     text: &'a str,
     captures: Captures,
-) -> Result<(Direction, Vnum), Box<dyn Error + 'a>> {
+) -> Result<(Direction, (Vnum, Door)), Box<dyn Error + 'a>> {
     let direction_match = captures.name("direction").unwrap();
     let direction = match &text[direction_match.start()..direction_match.end()] {
         "0" => Direction::North,
@@ -178,7 +178,13 @@ fn parse_door<'a>(
     let destination_match = captures.name("destination").unwrap();
     let destination = u32::from_str(&text[destination_match.start()..destination_match.end()])?;
 
-    Ok((direction, destination))
+    let locks_match = captures.name("locks").unwrap();
+    let door = match &text[locks_match.start()..locks_match.end()] {
+        "0" => Door::None,
+        _ => Door::Closed,
+    };
+
+    Ok((direction, (destination, door)))
 }
 
 #[derive(Debug)]

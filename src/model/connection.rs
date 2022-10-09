@@ -1,12 +1,12 @@
-use crate::room::{Direction, Room, Vnum};
+use crate::room::{Direction, Door, Room, Vnum};
 use fnv::FnvHashMap;
 use std::rc::Rc;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Connection {
-    TwoWay { from: Exit, to: Exit, door: bool },
-    OneWay { from: Exit, to: Exit, door: bool },
-    External { from: Exit, to: String, door: bool },
+    TwoWay { from: Exit, to: Exit, door: Door },
+    OneWay { from: Exit, to: Exit, door: Door },
+    External { from: Exit, to: String, door: Door },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -23,7 +23,7 @@ pub fn find_connections(
     let mut connections: Vec<Connection> = Vec::new();
 
     for room in rooms.values() {
-        for (&direction, destination) in &room.exits {
+        for (&direction, (destination, from_door)) in &room.exits {
             let exit = Exit {
                 direction,
                 in_room: room.vnum,
@@ -44,11 +44,11 @@ pub fn find_connections(
                 let matching_exit = dest
                     .exits
                     .iter()
-                    .find(|(dir, vnum)| **vnum == room.vnum && **dir == direction.opposite());
+                    .find(|(dir, (vnum, _))| *vnum == room.vnum && **dir == direction.opposite());
                 let matching_exit_in_another_dir =
-                    dest.exits.iter().find(|(_, vnum)| **vnum == room.vnum);
+                    dest.exits.iter().find(|(_, (vnum, _))| *vnum == room.vnum);
 
-                if let Some((&dir, _)) = matching_exit.or(matching_exit_in_another_dir) {
+                if let Some((&dir, (_, to_door))) = matching_exit.or(matching_exit_in_another_dir) {
                     Connection::TwoWay {
                         from: exit,
                         to: Exit {
@@ -58,7 +58,7 @@ pub fn find_connections(
                                 .get(&dest.vnum)
                                 .expect("Room vnum wasn't included in vnum->index map"),
                         },
-                        door: false, // FIXME
+                        door: from_door.or(to_door),
                     }
                 } else {
                     Connection::OneWay {
@@ -70,14 +70,14 @@ pub fn find_connections(
                                 .get(&dest.vnum)
                                 .expect("Room vnum wasn't invluced in vnum-index map"),
                         },
-                        door: false, // FIXME
+                        door: *from_door,
                     }
                 }
             } else {
                 Connection::External {
                     from: exit,
                     to: destination.to_string(),
-                    door: false, // FIXME
+                    door: *from_door,
                 }
             };
 
