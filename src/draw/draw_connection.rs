@@ -42,7 +42,7 @@ fn draw_connection(draw: &Draw, model: &Model, from: &Exit, to: &Exit, one_way: 
         .join_round()
         .points(vec![p1, p2, p3, p4]);
     if let Door::Closed = door {
-        draw_door_between(draw, p2, p3);
+        draw_door_between(draw, p1, p2, p4, p3);
     }
 }
 
@@ -53,7 +53,16 @@ fn draw_external_connection(draw: &Draw, model: &Model, exit: &Exit, text: &str,
     draw.xy(p2 + delta * 0.5).text(text).color(RED);
 }
 
-fn draw_door_between(draw: &Draw, p1: Vec2, p2: Vec2) {
+fn draw_door_between(draw: &Draw, f0: Vec2, f1: Vec2, t0: Vec2, t1: Vec2) {
+    // This threshold is arbitrary
+    if (f1 - t1).length() > 15f32 {
+        draw_perpendicular_line_between(draw, f1, t1);
+    } else {
+        draw_perpendicular_line_between(draw, f0, t0);
+    }
+}
+
+fn draw_perpendicular_line_between(draw: &Draw, p1: Vec2, p2: Vec2) {
     let middle = (p1 + p2) * 0.5;
     let delta = p2 - p1;
     let inverted = Vec2::new(delta.y, delta.x * -1f32).normalize_or_zero() * 10f32;
@@ -96,8 +105,8 @@ fn draw_disconnected_connection(
     draw.xy(p4).text(label).color(BLACK);
 
     if let Door::Closed = door {
-        draw_door_between(draw, p1, p2);
-        draw_door_between(draw, p4, p3);
+        draw_perpendicular_line_between(draw, p1, p2);
+        draw_perpendicular_line_between(draw, p4, p3);
     }
 }
 
@@ -108,21 +117,23 @@ enum Lean {
 }
 
 fn find_exit(model: &Model, exit: &Exit, lean: Lean) -> (Vec2, Vec2) {
-    let start = location_of(model, exit.index);
+    let center = location_of(model, exit.index);
+    let half_size = model.square_size() * 0.5;
     let delta = match exit.direction {
-        Direction::North => Vec2::new(0f32, model.square_size()),
-        Direction::East => Vec2::new(model.square_size(), 0f32),
-        Direction::South => Vec2::new(0f32, model.square_size() * -1f32),
-        Direction::West => Vec2::new(model.square_size() * -1f32, 0f32),
+        Direction::North => Vec2::new(0f32, half_size),
+        Direction::East => Vec2::new(half_size, 0f32),
+        Direction::South => Vec2::new(0f32, half_size * -1f32),
+        Direction::West => Vec2::new(half_size * -1f32, 0f32),
         Direction::Up => match lean {
-            Lean::None | Lean::Right => Vec2::default() + model.square_size(),
-            Lean::Left => Vec2::new(model.square_size() * -1f32, model.square_size()),
+            Lean::None | Lean::Right => Vec2::default() + half_size,
+            Lean::Left => Vec2::new(half_size * -1f32, half_size),
         },
         Direction::Down => match lean {
-            Lean::None | Lean::Left => Vec2::default() - model.square_size(),
-            Lean::Right => Vec2::new(model.square_size(), model.square_size() * -1f32),
+            Lean::None | Lean::Left => Vec2::default() - half_size,
+            Lean::Right => Vec2::new(half_size, half_size * -1f32),
         },
     };
+    let start = center + delta;
     let end = start + delta;
     (start, end)
 }
