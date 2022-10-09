@@ -1,6 +1,6 @@
+use crate::room::Door;
 use crate::{Connection, Direction, Exit, Model};
 use nannou::prelude::*;
-use crate::room::Door;
 
 const CONNECTION_LABELS: &'static [&'static str] = &[
     "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S",
@@ -35,20 +35,24 @@ pub fn draw_connections(draw: &Draw, model: &Model) {
 }
 
 fn draw_connection(draw: &Draw, model: &Model, from: &Exit, to: &Exit, one_way: bool, door: Door) {
-    let (p1, p2) = find_exit(draw, model, from, Lean::None);
-    let (p4, p3) = find_exit(draw, model, to, Lean::None);
+    let (p1, p2) = find_exit(model, from, Lean::None);
+    let (p4, p3) = find_exit(model, to, Lean::None);
     draw.polyline()
         .weight(2f32)
         .join_round()
         .points(vec![p1, p2, p3, p4]);
     if let Door::Closed = door {
         let middle_of_connection = (p3 + p2) * 0.5;
-        draw.xy(middle_of_connection).ellipse().radius(5f32).color(BLACK).finish();
+        draw.xy(middle_of_connection)
+            .ellipse()
+            .radius(5f32)
+            .color(BLACK)
+            .finish();
     }
 }
 
 fn draw_external_connection(draw: &Draw, model: &Model, exit: &Exit, text: &str) {
-    let (p1, p2) = find_exit(draw, model, exit, Lean::None);
+    let (p1, p2) = find_exit(model, exit, Lean::None);
     let delta = p2 - p1;
     draw.line().stroke_weight(2f32).start(p1).end(p2);
     draw.xy(p2 + delta * 0.5).text(text).color(RED);
@@ -58,12 +62,7 @@ fn draw_disconnected_connection(draw: &Draw, model: &Model, from: &Exit, to: &Ex
     let x1 = location_of(model, from.index).x;
     let x2 = location_of(model, to.index).x;
 
-    let (p1, p2) = find_exit(
-        draw,
-        model,
-        from,
-        if x1 < x2 { Lean::Right } else { Lean::Left },
-    );
+    let (p1, p2) = find_exit(model, from, if x1 < x2 { Lean::Right } else { Lean::Left });
     draw.line().stroke_weight(2f32).start(p1).end(p2);
     draw.xy(p2)
         .ellipse()
@@ -73,12 +72,7 @@ fn draw_disconnected_connection(draw: &Draw, model: &Model, from: &Exit, to: &Ex
         .finish();
     draw.xy(p2).text(label).color(BLACK);
 
-    let (p3, p4) = find_exit(
-        draw,
-        model,
-        to,
-        if x1 < x2 { Lean::Left } else { Lean::Right },
-    );
+    let (p3, p4) = find_exit(model, to, if x1 < x2 { Lean::Left } else { Lean::Right });
     draw.line().stroke_weight(2f32).start(p3).end(p4);
     draw.xy(p4)
         .ellipse()
@@ -95,7 +89,7 @@ enum Lean {
     Right,
 }
 
-fn find_exit(draw: &Draw, model: &Model, exit: &Exit, lean: Lean) -> (Vec2, Vec2) {
+fn find_exit(model: &Model, exit: &Exit, lean: Lean) -> (Vec2, Vec2) {
     let start = location_of(model, exit.index);
     let delta = match exit.direction {
         Direction::North => Vec2::new(0f32, model.square_size()),
