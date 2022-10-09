@@ -34,44 +34,54 @@ pub fn draw_connections(draw: &Draw, model: &Model) {
 }
 
 fn draw_connection(draw: &Draw, model: &Model, from: &Exit, to: &Exit, one_way: bool, door: bool) {
-    let (p1, _) = draw_exit(draw, model, from, Lean::None);
-    let (p2, _) = draw_exit(draw, model, to, Lean::None);
-    draw.line()
-        .stroke_weight(2f32)
-        .start(p1)
-        .end(p2);
+    let (p1, p2) = find_exit(draw, model, from, Lean::None);
+    let (p4, p3) = find_exit(draw, model, to, Lean::None);
+    draw.polyline()
+        .weight(2f32)
+        .join_round()
+        .points(vec![p1, p2, p3, p4]);
 }
 
 fn draw_external_connection(draw: &Draw, model: &Model, exit: &Exit, text: &str) {
-    let (endcap, delta) = draw_exit(draw, model, exit, Lean::None);
-    draw.xy(endcap + delta * 0.5).text(text).color(RED);
+    let (p1, p2) = find_exit(draw, model, exit, Lean::None);
+    let delta = p2 - p1;
+    draw.line().stroke_weight(2f32).start(p1).end(p2);
+    draw.xy(p2 + delta * 0.5).text(text).color(RED);
 }
 
-fn draw_disconnected_connection(
-    draw: &Draw,
-    model: &Model,
-    from: &Exit,
-    to: &Exit,
-    label: &str,
-) {
-    let x1 = location_of(model, from.index).x ;
-    let x2 = location_of(model, to.index).x ;
+fn draw_disconnected_connection(draw: &Draw, model: &Model, from: &Exit, to: &Exit, label: &str) {
+    let x1 = location_of(model, from.index).x;
+    let x2 = location_of(model, to.index).x;
 
-    let (endcap1, _) = draw_exit(draw, model, from, if x1 < x2 { Lean::Right } else { Lean::Left });
-    draw.xy(endcap1).ellipse()
+    let (p1, p2) = find_exit(
+        draw,
+        model,
+        from,
+        if x1 < x2 { Lean::Right } else { Lean::Left },
+    );
+    draw.line().stroke_weight(2f32).start(p1).end(p2);
+    draw.xy(p2)
+        .ellipse()
         .radius(model.square_size() * 0.25)
         .stroke(BLACK)
         .stroke_weight(2f32)
         .finish();
-    draw.xy(endcap1).text(label).color(BLACK);
+    draw.xy(p2).text(label).color(BLACK);
 
-    let (endcap2, _) = draw_exit(draw, model, to, if x1 < x2 { Lean::Left } else { Lean::Right });
-    draw.xy(endcap2).ellipse()
+    let (p3, p4) = find_exit(
+        draw,
+        model,
+        to,
+        if x1 < x2 { Lean::Left } else { Lean::Right },
+    );
+    draw.line().stroke_weight(2f32).start(p3).end(p4);
+    draw.xy(p4)
+        .ellipse()
         .radius(model.square_size() * 0.25)
         .stroke(BLACK)
         .stroke_weight(2f32)
         .finish();
-    draw.xy(endcap2).text(label).color(BLACK);
+    draw.xy(p4).text(label).color(BLACK);
 }
 
 enum Lean {
@@ -80,33 +90,24 @@ enum Lean {
     Right,
 }
 
-fn draw_exit(draw: &Draw, model: &Model, exit: &Exit, lean: Lean) -> (Vec2, Vec2) {
+fn find_exit(draw: &Draw, model: &Model, exit: &Exit, lean: Lean) -> (Vec2, Vec2) {
     let start = location_of(model, exit.index);
     let delta = match exit.direction {
         Direction::North => Vec2::new(0f32, model.square_size()),
         Direction::East => Vec2::new(model.square_size(), 0f32),
         Direction::South => Vec2::new(0f32, model.square_size() * -1f32),
         Direction::West => Vec2::new(model.square_size() * -1f32, 0f32),
-        Direction::Up => {
-            match lean {
-                Lean::None | Lean::Right => Vec2::default() + model.square_size(),
-                Lean::Left => Vec2::new(model.square_size() * -1f32, model.square_size()),
-            }
-        }
-        Direction::Down => {
-            match lean {
-                Lean::None | Lean::Left => Vec2::default() - model.square_size(),
-                Lean::Right => Vec2::new(model.square_size(), model.square_size() * -1f32),
-            }
-        }
+        Direction::Up => match lean {
+            Lean::None | Lean::Right => Vec2::default() + model.square_size(),
+            Lean::Left => Vec2::new(model.square_size() * -1f32, model.square_size()),
+        },
+        Direction::Down => match lean {
+            Lean::None | Lean::Left => Vec2::default() - model.square_size(),
+            Lean::Right => Vec2::new(model.square_size(), model.square_size() * -1f32),
+        },
     };
     let end = start + delta;
-    draw.line()
-        .stroke_weight(2f32)
-        .start(start)
-        .end(end)
-        .color(BLACK);
-    (end, delta)
+    (start, end)
 }
 
 fn location_of(model: &Model, index: usize) -> Vec2 {
