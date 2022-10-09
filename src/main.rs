@@ -33,7 +33,8 @@ fn model(app: &App) -> Model {
         }
     };
 
-    let _ = app.new_window()
+    let _ = app
+        .new_window()
         .title("Avatar Area Visualizer")
         .build()
         .unwrap();
@@ -50,6 +51,12 @@ fn apply_grab(model: &mut Model) {
         }
     }
     model.ui.grab_origin = None;
+}
+
+fn apply_grab_to_room(model: &mut Model, idx: usize) {
+    if let Some(grab_offset) = model.ui.grab_offset {
+        model.locations[idx] += grab_offset;
+    }
 }
 
 fn event(app: &App, model: &mut Model, event: Event) {
@@ -88,18 +95,46 @@ fn event(app: &App, model: &mut Model, event: Event) {
 
             // Handle selecting rooms
             if let Some(room_idx) = grabbed_room {
-                if !model.selected[room_idx] {
-                    apply_grab(model);
+                if app.keys.mods.ctrl() {
+                    // If holding ctrl, toggle room selection on and off
+                    if model.selected[room_idx] {
+                        apply_grab_to_room(model, room_idx);
+                        model.selected[room_idx] = false;
+                    } else {
+                        apply_grab(model);
+                        model.selected[room_idx] = true;
+                    }
+                } else {
+                    // If not holding ctrl, select only one at a time
+                    // But also don't clear selection if clicked room is already selected
+                    if !model.selected[room_idx] {
+                        apply_grab(model);
+                        model.selected.fill(false);
+                        model.selected[room_idx] = true;
+                    }
                 }
-                model.selected[room_idx] = true;
+
                 if is_double_click {
                     model.select_all_in_plane(model.room_planes[room_idx]);
                 }
                 model.ui.grab_origin = Some(model.locations[room_idx]);
             } else {
-                apply_grab(model);
-                model.selected.fill(false);
+                if !app.keys.mods.ctrl() {
+                    apply_grab(model);
+                    model.selected.fill(false);
+                }
             }
+        }
+        Event::DeviceEvent(
+            _,
+            DeviceEvent::Button {
+                button: 3,
+                state: ElementState::Pressed,
+            },
+        ) => {
+            // FIXME is rightclick ALWAYS button 3, or is it device specific, and is it gonna fuck me up when someone uses a different mouse?
+            model.ui.grab_offset = None;
+            model.ui.grab_origin = None;
         }
         Event::DeviceEvent(
             device_id,
