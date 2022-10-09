@@ -13,18 +13,7 @@ pub fn draw_connections(draw: &Draw, model: &Model) {
             Connection::TwoWay { from, to, door } => {
                 if is_updown_connection(from, to) {
                     let symbol = endcap_symbol.next().unwrap();
-                    draw_disconnected_connection(
-                        &draw,
-                        model,
-                        from,
-                        ConnectionEndCap::Symbol(symbol),
-                    );
-                    draw_disconnected_connection(
-                        &draw,
-                        model,
-                        to,
-                        ConnectionEndCap::Symbol(symbol),
-                    );
+                    draw_disconnected_connection(draw, model, from, to, symbol);
                 } else {
                     draw_connection(&draw, &model, from, to, false, *door);
                 }
@@ -32,65 +21,84 @@ pub fn draw_connections(draw: &Draw, model: &Model) {
             Connection::OneWay { from, to, door } => {
                 if is_updown_connection(from, to) {
                     let symbol = endcap_symbol.next().unwrap();
-                    draw_disconnected_connection(
-                        &draw,
-                        model,
-                        from,
-                        ConnectionEndCap::Symbol(symbol),
-                    );
-                    draw_disconnected_connection(
-                        &draw,
-                        model,
-                        to,
-                        ConnectionEndCap::Symbol(symbol),
-                    );
+                    draw_disconnected_connection(draw, model, from, to, symbol);
                 } else {
                     draw_connection(&draw, &model, from, to, true, *door);
                 }
             }
             Connection::External { from, to, .. } => {
-                draw_disconnected_connection(&draw, &model, from, ConnectionEndCap::Vnum(&to));
+                draw_external_connection(&draw, &model, from, &to);
             }
         }
     }
 }
 
 fn draw_connection(draw: &Draw, model: &Model, from: &Exit, to: &Exit, one_way: bool, door: bool) {
-    let mut from_origin = model.locations[from.index];
-    let mut to_origin = model.locations[to.index];
-    if let Some(offset) = model.ui.grab_offset {
-        if model.selected[from.index] {
-            from_origin += offset;
-        }
-        if model.selected[to.index] {
-            to_origin += offset;
-        }
-    }
+    let (p1, _) = draw_exit(draw, model, from, Lean::None);
+    let (p2, _) = draw_exit(draw, model, to, Lean::None);
     draw.line()
         .stroke_weight(2f32)
-        .start(from_origin)
-        .end(to_origin);
+        .start(p1)
+        .end(p2);
+}
+
+fn draw_external_connection(draw: &Draw, model: &Model, exit: &Exit, text: &str) {
+    let (endcap, delta) = draw_exit(draw, model, exit, Lean::None);
+    draw.xy(endcap + delta * 0.5).text(text).color(RED);
 }
 
 fn draw_disconnected_connection(
     draw: &Draw,
     model: &Model,
     from: &Exit,
-    end_cap: ConnectionEndCap,
+    to: &Exit,
+    label: &str,
 ) {
-    let mut start = model.locations[from.index];
-    if let Some(offset) = model.ui.grab_offset {
-        if model.selected[from.index] {
-            start += offset;
-        }
-    }
-    let delta = match from.direction {
+    let x1 = location_of(model, from.index).x ;
+    let x2 = location_of(model, to.index).x ;
+
+    let (endcap1, _) = draw_exit(draw, model, from, if x1 < x2 { Lean::Right } else { Lean::Left });
+    draw.xy(endcap1).ellipse()
+        .radius(model.square_size() * 0.25)
+        .stroke(BLACK)
+        .stroke_weight(2f32)
+        .finish();
+    draw.xy(endcap1).text(label).color(BLACK);
+
+    let (endcap2, _) = draw_exit(draw, model, to, if x1 < x2 { Lean::Left } else { Lean::Right });
+    draw.xy(endcap2).ellipse()
+        .radius(model.square_size() * 0.25)
+        .stroke(BLACK)
+        .stroke_weight(2f32)
+        .finish();
+    draw.xy(endcap2).text(label).color(BLACK);
+}
+
+enum Lean {
+    None,
+    Left,
+    Right,
+}
+
+fn draw_exit(draw: &Draw, model: &Model, exit: &Exit, lean: Lean) -> (Vec2, Vec2) {
+    let start = location_of(model, exit.index);
+    let delta = match exit.direction {
         Direction::North => Vec2::new(0f32, model.square_size()),
         Direction::East => Vec2::new(model.square_size(), 0f32),
         Direction::South => Vec2::new(0f32, model.square_size() * -1f32),
         Direction::West => Vec2::new(model.square_size() * -1f32, 0f32),
-        Direction::Up => Vec2::default() + model.square_size(),
-        Direction::Down => Vec2::default() - model.square_size(),
+        Direction::Up => {
+            match lean {
+                Lean::None | Lean::Right => Vec2::default() + model.square_size(),
+                Lean::Left => Vec2::new(model.square_size() * -1f32, model.square_size()),
+            }
+        }
+        Direction::Down => {
+            match lean {
+                Lean::None | Lean::Left => Vec2::default() - model.square_size(),
+                Lean::Right => Vec2::new(model.square_size(), model.square_size() * -1f32),
+            }
+        }
     };
     let end = start + delta;
     draw.line()
@@ -98,19 +106,14 @@ fn draw_disconnected_connection(
         .start(start)
         .end(end)
         .color(BLACK);
-    match end_cap {
-        ConnectionEndCap::Vnum(vnum) => {
-            draw.xy(start + delta + delta * 0.5).text(vnum).color(RED);
-        }
-        ConnectionEndCap::Symbol(label) => {
-            let draw = draw.xy(start + delta);
-            draw.ellipse()
-                .radius(model.square_size() * 0.25)
-                .stroke(BLACK)
-                .stroke_weight(2f32)
-                .finish();
-            draw.text(label).color(BLACK);
-        }
+    (end, delta)
+}
+
+fn location_of(model: &Model, index: usize) -> Vec2 {
+    if model.selected[index] {
+        model.locations[index] + model.ui.grab_offset.unwrap_or_default()
+    } else {
+        model.locations[index]
     }
 }
 
@@ -121,9 +124,4 @@ fn is_updown_connection(left: &Exit, right: &Exit) -> bool {
         }
         _ => false,
     }
-}
-
-enum ConnectionEndCap<'a> {
-    Vnum(&'a str),
-    Symbol(&'a str),
 }
