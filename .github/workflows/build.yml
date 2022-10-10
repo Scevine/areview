@@ -1,0 +1,57 @@
+name: Build areview release assets
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+      - name: Install rust toolchain
+        id: rust-toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: ${{ matrix.target }}
+          override: true
+      - name: Cache Rust Dependencies
+        id: cache-rust-deps
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            target/release/.fingerprint
+            target/release/build
+            target/release/deps
+          key: ${{ matrix.os }}-${{ steps.rust-toolchain.outputs.rustc_hash }}-${{ hashFiles('**/Cargo.lock') }}
+      - name: Build
+        run: cargo build --release --locked
+      - name: Upload asset to release
+        uses: shogo82148/actions-upload-release-asset@8dbaa4469aa7256e70624d72f2567fac8f5341b3
+        with:
+          asset_path: target/release/${{ matrix.artifact-name }}
+          asset_name: ${{ matrix.asset-name }}
+          asset_content_type: application/octet-stream
+          upload_url: ${{ github.event.release.upload_url }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact-name: areview
+            asset-name: areview-linux-amd64
+          - os: macos11
+            target: x86_64-apple-darwin
+            artifact-name: areview
+            asset-name: areview-darwin-amd64
+          - os: windows-2019
+            target: x86_64-pc-windows-msvc
+            artifact-name: areview.exe
+            asset-name: areview.exe
