@@ -47,7 +47,7 @@ jobs:
             target: x86_64-unknown-linux-gnu
             artifact-name: areview
             asset-name: areview-linux-amd64
-          - os: macos11
+          - os: macos-11
             target: x86_64-apple-darwin
             artifact-name: areview
             asset-name: areview-darwin-amd64
