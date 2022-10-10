@@ -1,4 +1,3 @@
-use crate::draw::location_of;
 use crate::room::Door;
 use crate::{Connection, Direction, Exit, Model};
 use nannou::prelude::*;
@@ -148,5 +147,13 @@ fn is_updown_connection(left: &Exit, right: &Exit) -> bool {
             true
         }
         _ => false,
+    }
+}
+
+fn location_of(model: &Model, index: usize) -> Vec2 {
+    if model.selected[index] {
+        model.locations[index] + model.ui.grab_offset.unwrap_or_default()
+    } else {
+        model.locations[index]
     }
 }

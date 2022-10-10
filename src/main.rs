@@ -3,7 +3,7 @@ mod model;
 mod parser;
 mod room;
 
-use crate::draw::{draw_connections, draw_legend, draw_rooms, location_of, LabelColor};
+use crate::draw::{draw_connections, draw_legend, draw_rooms, LabelColor};
 use crate::model::Exit;
 use crate::room::Direction;
 use model::{Connection, Model};
@@ -173,7 +173,8 @@ fn event(app: &App, model: &mut Model, event: Event) {
                         }
 
                         // Snap to closest guide when current pos is within range
-                        if let Some(guide) = find_closest_guide(model) {
+                        // FIXME: once a room gets on a guide axis, it can't go off; disable until fixed
+                        if let Some(guide) = find_closest_guide(app, model) {
                             match guide {
                                 Guide::X { x, dist } => if f32::abs(dist) < 10f32 {
                                     offset.x = x - grab_origin.x;
@@ -199,7 +200,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     draw_legend(&draw.xy(app.window_rect().top_left()), &model.sectors);
 
-    draw_closest_guide(&draw, model, app.window_rect());
+    draw_closest_guide(app, &draw, model, app.window_rect());
 
     draw_connections(&draw, model);
 
@@ -213,8 +214,9 @@ enum Guide {
     Y { y: f32, dist: f32 },
 }
 
-fn find_closest_guide(model: &Model) -> Option<Guide> {
-    let grabbed = location_of(model, model.ui.grabbed?);
+fn find_closest_guide(app: &App, model: &Model) -> Option<Guide> {
+    let current_x = app.mouse.x;
+    let current_y = app.mouse.y;
     let snap_to = model.ui.guides.as_ref()?;
 
     let (closest_x, dist_x) =
@@ -222,7 +224,7 @@ fn find_closest_guide(model: &Model) -> Option<Guide> {
             .xs
             .iter()
             .fold((f32::INFINITY, f32::INFINITY), |closest, x| {
-                let dist = grabbed.x - x;
+                let dist = current_x - x;
                 if f32::abs(dist) < f32::abs(closest.1) {
                     (*x, dist)
                 } else {
@@ -234,7 +236,7 @@ fn find_closest_guide(model: &Model) -> Option<Guide> {
             .ys
             .iter()
             .fold((f32::INFINITY, f32::INFINITY), |closest, y| {
-                let dist = grabbed.y - y;
+                let dist = current_y - y;
                 if f32::abs(dist) < f32::abs(closest.1) {
                     (*y, dist)
                 } else {
@@ -254,8 +256,8 @@ fn find_closest_guide(model: &Model) -> Option<Guide> {
     }
 }
 
-fn draw_closest_guide(draw: &Draw, model: &Model, window: Rect) {
-    match find_closest_guide(model) {
+fn draw_closest_guide(app: &App, draw: &Draw, model: &Model, window: Rect) {
+    match find_closest_guide(app, model) {
         Some(Guide::X { x, .. }) => {
             draw.line()
                 .start(Vec2::new(x, window.top()))
