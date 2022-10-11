@@ -160,28 +160,15 @@ fn event(app: &App, model: &mut Model, event: Event) {
                     if let Some(grab_origin) = model.ui.grab_origin {
                         let mut offset = Vec2::new(app.mouse.x, app.mouse.y) - grab_origin;
 
-                        // Restrict axis movement X or Y (whichever is closest to current pos) when shift is pressed
-                        // TODO: apply restrict_axis immediately when shift is pressed/released too, not just on mouse move
-                        let restrict_axis = app.keys.mods.shift();
-                        if restrict_axis {
-                            let closer_to_x_axis = f32::abs(offset.x) < f32::abs(offset.y);
-                            if closer_to_x_axis {
-                                offset.x = 0f32;
-                            } else {
-                                offset.y = 0f32;
-                            }
-                        }
-
                         // Snap to closest guide when current pos is within range
                         // FIXME: once a room gets on a guide axis, it can't go off; disable until fixed
-                        if let Some(guide) = find_closest_guide(app, model) {
-                            match guide {
-                                Guide::X { x, dist } => if f32::abs(dist) < 10f32 {
-                                    offset.x = x - grab_origin.x;
-                                }
-                                Guide::Y { y, dist } => if f32::abs(dist) < 10f32 {
-                                    offset.y = y - grab_origin.y;
-                                }
+                        if app.keys.mods.shift() {
+                            let (guide_x, guide_y) = find_closest_guides(app, model);
+                            if let Some(x) = guide_x {
+                                offset.x = x - grab_origin.x;
+                            }
+                            if let Some(y) = guide_y {
+                                offset.y = y - grab_origin.y;
                             }
                         }
 
@@ -200,7 +187,9 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     draw_legend(&draw.xy(app.window_rect().top_left()), &model.sectors);
 
-    draw_closest_guide(app, &draw, model, app.window_rect());
+    if app.keys.mods.shift() {
+        draw_closest_guide(app, &draw, model, app.window_rect());
+    }
 
     draw_connections(&draw, model);
 
@@ -209,15 +198,15 @@ fn view(app: &App, model: &Model, frame: Frame) {
     draw.to_frame(app, &frame).unwrap();
 }
 
-enum Guide {
-    X { x: f32, dist: f32 },
-    Y { y: f32, dist: f32 },
-}
+const SNAP_TO_THRESHOLD: f32 = 5.0;
 
-fn find_closest_guide(app: &App, model: &Model) -> Option<Guide> {
+fn find_closest_guides(app: &App, model: &Model) -> (Option<f32>, Option<f32>) {
     let current_x = app.mouse.x;
     let current_y = app.mouse.y;
-    let snap_to = model.ui.guides.as_ref()?;
+    let snap_to = match model.ui.guides.as_ref() {
+        Some(s) => s,
+        None => return (None, None),
+    };
 
     let (closest_x, dist_x) =
         snap_to
@@ -243,33 +232,25 @@ fn find_closest_guide(app: &App, model: &Model) -> Option<Guide> {
                     closest
                 }
             });
-    if dist_x < dist_y {
-        Some(Guide::X {
-            x: closest_x,
-            dist: dist_x,
-        })
-    } else {
-        Some(Guide::Y {
-            y: closest_y,
-            dist: dist_y,
-        })
-    }
+    let x = if dist_x < SNAP_TO_THRESHOLD { Some(closest_x) } else { None };
+    let y = if dist_y < SNAP_TO_THRESHOLD { Some(closest_y) } else { None };
+
+    (x, y)
 }
 
 fn draw_closest_guide(app: &App, draw: &Draw, model: &Model, window: Rect) {
-    match find_closest_guide(app, model) {
-        Some(Guide::X { x, .. }) => {
-            draw.line()
-                .start(Vec2::new(x, window.top()))
-                .end(Vec2::new(x, window.bottom()))
-                .color(RED);
-        }
-        Some(Guide::Y { y, .. }) => {
-            draw.line()
-                .start(Vec2::new(window.left(), y))
-                .end(Vec2::new(window.right(), y))
-                .color(RED);
-        }
-        None => {}
+    let (x, y) = find_closest_guides(app, model);
+
+    if let Some(x) = x {
+        draw.line()
+            .start(Vec2::new(x, window.top()))
+            .end(Vec2::new(x, window.bottom()))
+            .color(RED);
+    }
+    if let Some(y) = y {
+        draw.line()
+            .start(Vec2::new(window.left(), y))
+            .end(Vec2::new(window.right(), y))
+            .color(RED);
     }
 }
