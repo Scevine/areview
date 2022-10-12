@@ -12,7 +12,7 @@ pub fn draw_connections(draw: &Draw, model: &Model) {
     for connection in &model.connections {
         match connection {
             Connection::TwoWay { from, to, door } => {
-                if is_updown_connection(from, to) {
+                if is_updown_connection(from, to) || is_cross_plane_connection(from.index, to.index, model) {
                     let symbol = endcap_symbol.next().unwrap();
                     draw_disconnected_connection(draw, model, from, to, symbol, *door);
                 } else {
@@ -20,7 +20,7 @@ pub fn draw_connections(draw: &Draw, model: &Model) {
                 }
             }
             Connection::OneWay { from, to, door } => {
-                if is_updown_connection(from, to) {
+                if is_updown_connection(from, to) || is_cross_plane_connection(from.index, to.index, model) {
                     let symbol = endcap_symbol.next().unwrap();
                     draw_disconnected_connection(draw, model, from, to, symbol, *door);
                 } else {
@@ -148,6 +148,10 @@ fn is_updown_connection(left: &Exit, right: &Exit) -> bool {
         }
         _ => false,
     }
+}
+
+fn is_cross_plane_connection(left: usize, right: usize, model: &Model) -> bool {
+    model.room_planes[left] != model.room_planes[right]
 }
 
 fn location_of(model: &Model, index: usize) -> Vec2 {
