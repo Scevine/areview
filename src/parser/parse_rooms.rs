@@ -1,4 +1,4 @@
-use crate::room::{Direction, Door, Room, Sector, Vnum};
+use crate::model::{Direction, Door, Room, Sector, Vnum};
 use fnv::FnvHashMap;
 use once_cell::sync::Lazy;
 use regex::{Captures, Match, Regex};

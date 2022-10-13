@@ -1,7 +1,7 @@
 mod parse_rooms;
 mod sort_rooms;
 
-use crate::room::{Room, Vnum};
+use crate::model::{Room, Vnum};
 use fnv::FnvHashMap;
 use std::error::Error;
 use std::path::Path;

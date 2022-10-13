@@ -1,4 +1,4 @@
-use crate::room::{Direction, Room, Vnum};
+use crate::model::{Direction, Room, Vnum};
 use fnv::FnvHashMap;
 use std::rc::Rc;
 
@@ -79,7 +79,7 @@ fn find_rooms_in_plane(
 #[cfg(test)]
 mod test {
     use super::{find_rooms_in_plane, Direction, Rc, Room};
-    use crate::room::{Door, Sector};
+    use crate::model::{Door, Sector};
 
     #[test]
     fn find_rooms_in_plane_groups_nsew_connections() {

@@ -1,4 +1,4 @@
-use crate::room::{Direction, Door, Room, Vnum};
+use crate::model::{Direction, Door, Room, Vnum};
 use fnv::FnvHashMap;
 use std::rc::Rc;
 

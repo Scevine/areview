@@ -1,12 +1,9 @@
 mod draw;
 mod model;
 mod parser;
-mod room;
 
 use crate::draw::{draw_connections, draw_legend, draw_rooms, LabelColor};
-use crate::model::Exit;
-use crate::room::Direction;
-use model::{Connection, Model};
+use crate::model::{Connection, Direction, Exit, Model};
 use nannou::event::ElementState;
 use nannou::prelude::*;
 use nannou::winit::event::DeviceEvent;
@@ -232,8 +229,16 @@ fn find_closest_guides(app: &App, model: &Model) -> (Option<f32>, Option<f32>) {
                     closest
                 }
             });
-    let x = if dist_x < SNAP_TO_THRESHOLD { Some(closest_x) } else { None };
-    let y = if dist_y < SNAP_TO_THRESHOLD { Some(closest_y) } else { None };
+    let x = if dist_x < SNAP_TO_THRESHOLD {
+        Some(closest_x)
+    } else {
+        None
+    };
+    let y = if dist_y < SNAP_TO_THRESHOLD {
+        Some(closest_y)
+    } else {
+        None
+    };
 
     (x, y)
 }

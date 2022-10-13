@@ -1,9 +1,10 @@
 mod connection;
 mod position_rooms;
+mod room;
 
-use crate::room::{Room, Sector, Vnum};
 use connection::find_connections;
 pub use connection::{Connection, Exit};
+pub use room::{Room, Sector, Direction, Door, Vnum};
 use fnv::{FnvHashMap, FnvHashSet};
 use nannou::prelude::{Rect, Vec2};
 use nannou::winit::event::DeviceId;

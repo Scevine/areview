@@ -1,4 +1,4 @@
-use crate::room::Sector;
+use crate::model::Sector;
 use crate::LabelColor;
 use nannou::prelude::Vec2;
 use nannou::Draw;

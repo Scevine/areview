@@ -1,4 +1,4 @@
-use crate::room::Door;
+use crate::model::Door;
 use crate::{Connection, Direction, Exit, Model};
 use nannou::prelude::*;
 
