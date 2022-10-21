@@ -41,7 +41,7 @@ jobs:
       - name: Upload asset to release
         uses: shogo82148/actions-upload-release-asset@8dbaa4469aa7256e70624d72f2567fac8f5341b3
         with:
-          asset_path: target/release/${{ matrix.artifact-name }}
+          asset_path: target/release/${{ matrix.asset-name }}
           asset_name: ${{ matrix.asset-name }}
           asset_content_type: application/octet-stream
           upload_url: ${{ github.event.release.upload_url }}
