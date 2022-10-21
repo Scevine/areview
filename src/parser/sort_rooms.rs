@@ -1,4 +1,5 @@
 use crate::model::{Direction, Room, Vnum};
+use crate::parser::rule::Rule;
 use fnv::FnvHashMap;
 use std::rc::Rc;
 
@@ -19,6 +20,7 @@ pub struct Rect {
 
 pub fn sort_rooms(
     rooms: Vec<Rc<Room>>,
+    rules: Vec<Rule>,
 ) -> (FnvHashMap<Vnum, (Rc<Room>, usize)>, Vec<Vec<Location>>) {
     let mut rooms = rooms.clone();
     rooms.sort_by(|a, b| a.vnum.cmp(&b.vnum));
@@ -28,13 +30,15 @@ pub fn sort_rooms(
         .enumerate()
         .map(|(idx, room)| (room.vnum, (room, idx)))
         .collect();
-    let planes = find_rooms_in_plane(None, &mut rooms);
+
+    let planes = find_rooms_in_plane(None, &mut rooms, &rules);
     (by_vnum, planes)
 }
 
 fn find_rooms_in_plane(
     location: Option<Location>,
     left_to_visit: &mut Vec<Rc<Room>>,
+    rules: &[Rule],
 ) -> Vec<Vec<Location>> {
     let mut this_plane = vec![];
 
@@ -72,10 +76,20 @@ fn find_rooms_in_plane(
                     .values()
                     .any(|(vnum, _)| *vnum == location.room.vnum)
                 {
-                    eprintln!(
-                        "suspicious one way connection from {} to {}",
-                        location.room.vnum, dest
-                    );
+                    queue_for_different_plane.push(dest_room);
+                    continue;
+                }
+
+                if rules.iter().any(|rule| match rule {
+                    Rule::Isolate(vnum) if *vnum == location.room.vnum => true,
+                    Rule::Separate(vnum, other) if *vnum == location.room.vnum && other == dest => {
+                        true
+                    }
+                    Rule::Separate(other, vnum) if *vnum == location.room.vnum && other == dest => {
+                        true
+                    }
+                    _ => false,
+                }) {
                     queue_for_different_plane.push(dest_room);
                     continue;
                 }
@@ -117,12 +131,12 @@ fn find_rooms_in_plane(
     let mut planes = vec![this_plane];
     for room in queue_for_different_plane.into_iter() {
         let mut more_planes =
-            find_rooms_in_plane(Some(Location { room, x: 0, y: 0 }), left_to_visit);
+            find_rooms_in_plane(Some(Location { room, x: 0, y: 0 }), left_to_visit, rules);
         planes.append(&mut more_planes);
     }
 
     while !left_to_visit.is_empty() {
-        let mut more_planes = find_rooms_in_plane(None, left_to_visit);
+        let mut more_planes = find_rooms_in_plane(None, left_to_visit, rules);
         planes.append(&mut more_planes);
     }
 
@@ -168,7 +182,7 @@ mod test {
 
         let original_rooms = vec![rooms.clone()];
 
-        let planes = find_rooms_in_plane(None, &mut rooms);
+        let planes = find_rooms_in_plane(None, &mut rooms, &[]);
         let planes = rooms_from_locations(planes);
         assert_eq!(planes, original_rooms);
     }
@@ -187,7 +201,7 @@ mod test {
             make_room(1002, &[(Direction::Down, (1000u32, Door::None))]),
         ];
 
-        let planes = find_rooms_in_plane(None, &mut rooms);
+        let planes = find_rooms_in_plane(None, &mut rooms, &[]);
         let planes = rooms_from_locations(planes);
         assert_eq!(
             planes,
@@ -215,7 +229,7 @@ mod test {
             make_room(1002, &[]),
         ];
 
-        let planes = find_rooms_in_plane(None, &mut rooms);
+        let planes = find_rooms_in_plane(None, &mut rooms, &[]);
         let planes = rooms_from_locations(planes);
         assert_eq!(
             planes,

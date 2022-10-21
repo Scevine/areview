@@ -7,7 +7,7 @@ use crate::model::{Connection, Direction, Exit, Model};
 use nannou::event::ElementState;
 use nannou::prelude::*;
 use nannou::winit::event::DeviceEvent;
-use parser::load_area;
+use parser::{load_area, ParseRuleError, Rule};
 
 fn main() {
     nannou::app(model)
@@ -22,8 +22,19 @@ fn model(app: &App) -> Model {
         eprintln!("No path to area file supplied!");
         std::process::exit(1);
     });
+    let rules: Vec<_> = std::env::args()
+        .skip(2)
+        .filter_map(|arg| match Rule::try_from(arg.as_str()) {
+            Ok(rule) => Some(rule),
+            Err(ParseRuleError::UnknownRule) => None,
+            Err(e) => {
+                eprintln!("Error parsing {}, {:?}", &arg, e);
+                None
+            }
+        })
+        .collect();
 
-    let area = match load_area(&path) {
+    let area = match load_area(&path, rules) {
         Ok(area) => area,
         Err(e) => {
             eprintln!("{e}");
