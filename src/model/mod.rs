@@ -2,14 +2,13 @@ mod connection;
 mod position_rooms;
 mod room;
 
-use connection::find_connections;
-pub use connection::{Connection, Exit};
-pub use room::{Room, Sector, Direction, Door, Vnum};
-use fnv::{FnvHashMap, FnvHashSet};
+use crate::parser::ParsedArea;
+pub use connection::{map_connection, Connection, Exit};
+use fnv::FnvHashSet;
 use nannou::prelude::{Rect, Vec2};
 use nannou::winit::event::DeviceId;
 use position_rooms::position_rooms;
-use std::rc::Rc;
+pub use room::{Direction, Door, Room, Sector, Vnum};
 use std::time::Duration;
 
 #[derive(Debug, Default)]
@@ -28,10 +27,13 @@ pub struct Model {
 impl Model {
     pub fn new(
         square_size: f32,
-        all_rooms: FnvHashMap<Vnum, Rc<Room>>,
-        grouped_rooms: Vec<Vec<Rc<Room>>>,
+        ParsedArea {
+            all_rooms,
+            grouped_rooms,
+            connections,
+        }: ParsedArea,
     ) -> Self {
-        let (plane_areas, all_locations) = position_rooms(&all_rooms, grouped_rooms, square_size);
+        let (plane_areas, all_locations) = position_rooms(grouped_rooms, square_size);
 
         let num_rooms = all_locations.len();
 
@@ -45,13 +47,10 @@ impl Model {
         let locations = all_locations.iter().map(|l| Vec2::new(l.x, l.y)).collect();
         let room_planes = all_locations.into_iter().map(|l| l.group).collect();
 
-        let indexes_by_vnums = rooms
-            .iter()
-            .enumerate()
-            .map(|(idx, room)| (room.vnum, idx))
+        let connections = connections
+            .into_iter()
+            .map(|c| map_connection(c, &all_rooms))
             .collect();
-
-        let connections = find_connections(&all_rooms, indexes_by_vnums);
 
         Model {
             square_size,

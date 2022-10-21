@@ -1,5 +1,4 @@
-use crate::model::{Direction, Room, Vnum};
-use fnv::FnvHashMap;
+use crate::model::Room;
 use nannou::prelude::{Rect, Vec2};
 use std::rc::Rc;
 
@@ -12,14 +11,13 @@ pub struct Location {
 }
 
 pub fn position_rooms(
-    all_rooms: &FnvHashMap<Vnum, Rc<Room>>,
-    planes: Vec<Vec<Rc<Room>>>,
+    planes: Vec<Vec<crate::parser::Location>>,
     square_size: f32,
 ) -> (Vec<Rect>, Vec<Location>) {
     let mut grouped_locations: Vec<_> = planes
         .into_iter()
         .enumerate()
-        .map(|(index, plane)| position_rooms_in_plane(all_rooms, plane, square_size, index))
+        .map(|(index, plane)| position_rooms_in_plane(plane, square_size, index))
         .collect();
 
     let shift_groups_by = grouped_locations.len() as isize / 2isize;
@@ -49,63 +47,19 @@ pub fn position_rooms(
 }
 
 fn position_rooms_in_plane(
-    all_rooms: &FnvHashMap<Vnum, Rc<Room>>,
-    plane: Vec<Rc<Room>>,
+    plane: Vec<crate::parser::Location>,
     square_size: f32,
     group: usize,
 ) -> (Rect, Vec<Location>) {
-    let mut locations: Vec<Location> = Vec::with_capacity(plane.len());
-
-    let mut to_visit = std::collections::VecDeque::new();
-    to_visit.push_back(Location {
-        x: 0f32,
-        y: 0f32,
-        room: plane[0].clone(),
-        group,
-    });
-    while !to_visit.is_empty() {
-        let loc = to_visit.pop_front().unwrap();
-        for (dir, (vnum, _)) in &loc.room.exits {
-            if to_visit.iter().any(|l| l.room.vnum == *vnum) {
-                continue;
-            }
-            if locations.iter().any(|l| l.room.vnum == *vnum) {
-                continue;
-            }
-            if let Some(dest) = all_rooms.get(vnum) {
-                let (x, y) = match dir {
-                    Direction::North => (loc.x, loc.y + 1f32),
-                    Direction::East => (loc.x + 1f32, loc.y),
-                    Direction::South => (loc.x, loc.y - 1f32),
-                    Direction::West => (loc.x - 1f32, loc.y),
-                    Direction::Up | Direction::Down => {
-                        continue;
-                    }
-                };
-                to_visit.push_back(Location {
-                    x,
-                    y,
-                    room: dest.clone(),
-                    group,
-                });
-            }
-        }
-        locations.push(loc);
-    }
-
-    // At this point, all rooms in `plane` should have been walked over, since a plane should consist
-    // 100% of rooms that are connected together in NSEW directions.
-    for room in plane
-        .iter()
-        .filter(|r| locations.iter().find(|l| l.room.vnum == r.vnum).is_none())
-    {
-        eprintln!("Room {} was not positioned as a location!", room.vnum);
-    }
-
-    for location in &mut locations {
-        location.x *= square_size * 2.0;
-        location.y *= square_size * 2.0;
-    }
+    let locations: Vec<_> = plane
+        .into_iter()
+        .map(|loc| Location {
+            x: loc.x as f32 * square_size * 2.0,
+            y: loc.y as f32 * square_size * 2.0,
+            room: loc.room,
+            group,
+        })
+        .collect();
 
     let area = {
         let mut max = Vec2::default();

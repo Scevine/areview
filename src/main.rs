@@ -22,8 +22,9 @@ fn model(app: &App) -> Model {
         eprintln!("No path to area file supplied!");
         std::process::exit(1);
     });
-    let (all_rooms, by_plane) = match load_area(&path) {
-        Ok(rooms) => rooms,
+
+    let area = match load_area(&path) {
+        Ok(area) => area,
         Err(e) => {
             eprintln!("{e}");
             std::process::exit(1);
@@ -36,7 +37,7 @@ fn model(app: &App) -> Model {
         .build()
         .unwrap();
 
-    Model::new(30f32, all_rooms, by_plane)
+    Model::new(30f32, area)
 }
 
 fn apply_grab(model: &mut Model) {

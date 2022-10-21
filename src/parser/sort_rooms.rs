@@ -2,18 +2,40 @@ use crate::model::{Direction, Room, Vnum};
 use fnv::FnvHashMap;
 use std::rc::Rc;
 
-pub fn sort_rooms(rooms: Vec<Room>) -> (FnvHashMap<Vnum, Rc<Room>>, Vec<Vec<Rc<Room>>>) {
-    let mut rooms: Vec<_> = rooms.into_iter().map(|r| Rc::new(r)).collect();
-    let hash: FnvHashMap<Vnum, Rc<Room>> =
-        rooms.iter().map(|room| (room.vnum, room.clone())).collect();
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Location {
+    pub x: i32,
+    pub y: i32,
+    pub room: Rc<Room>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Rect {
+    x1: i32,
+    x2: i32,
+    y1: i32,
+    y2: i32,
+}
+
+pub fn sort_rooms(
+    rooms: Vec<Rc<Room>>,
+) -> (FnvHashMap<Vnum, (Rc<Room>, usize)>, Vec<Vec<Location>>) {
+    let mut rooms = rooms.clone();
+    rooms.sort_by(|a, b| a.vnum.cmp(&b.vnum));
+    let by_vnum: FnvHashMap<Vnum, (Rc<Room>, usize)> = rooms
+        .iter()
+        .cloned()
+        .enumerate()
+        .map(|(idx, room)| (room.vnum, (room, idx)))
+        .collect();
     let planes = find_rooms_in_plane(None, &mut rooms);
-    (hash, planes)
+    (by_vnum, planes)
 }
 
 fn find_rooms_in_plane(
-    room: Option<Rc<Room>>,
+    location: Option<Location>,
     left_to_visit: &mut Vec<Rc<Room>>,
-) -> Vec<Vec<Rc<Room>>> {
+) -> Vec<Vec<Location>> {
     let mut this_plane = vec![];
 
     // Function should not be called with no rooms left to visit
@@ -22,18 +44,39 @@ fn find_rooms_in_plane(
     }
 
     let mut queue = std::collections::VecDeque::with_capacity(left_to_visit.len());
-    queue.push_back(room.unwrap_or(left_to_visit[0].clone()));
+    queue.push_back(location.unwrap_or(Location {
+        x: 0,
+        y: 0,
+        room: left_to_visit[0].clone(),
+    }));
     let mut queue_for_different_plane = vec![];
 
     while !queue.is_empty() {
-        let room = queue.pop_front().unwrap();
-        this_plane.push(room.clone());
+        let location = queue.pop_front().unwrap();
+        this_plane.push(location.clone());
 
-        for (dir, (dest, _)) in &room.exits {
+        for (dir, (dest, _)) in &location.room.exits {
             // Find the connected room
             if let Some(dest_room) = left_to_visit.iter().find(|r| r.vnum == *dest).cloned() {
                 // Should not be possible unless `left_to_visit` contained duplicate VNUMs
-                if this_plane.contains(&dest_room) || queue.contains(&dest_room) {
+                if this_plane.iter().any(|l| l.room == dest_room)
+                    || queue.iter().any(|l| l.room == dest_room)
+                {
+                    continue;
+                }
+
+                // If the connection is only one way, AND the destination's matching exit goes to a
+                // different room, consider it to be on a different plane
+                if !dest_room
+                    .exits
+                    .values()
+                    .any(|(vnum, _)| *vnum == location.room.vnum)
+                {
+                    eprintln!(
+                        "suspicious one way connection from {} to {}",
+                        location.room.vnum, dest
+                    );
+                    queue_for_different_plane.push(dest_room);
                     continue;
                 }
 
@@ -42,6 +85,13 @@ fn find_rooms_in_plane(
                         queue_for_different_plane.push(dest_room);
                     }
                     _ => {
+                        let (x, y) = match dir {
+                            Direction::North => (0, 1),
+                            Direction::East => (1, 0),
+                            Direction::South => (0, -1),
+                            Direction::West => (-1, 0),
+                            _ => unreachable!(),
+                        };
                         // If room was queued as an up/down connection for a separate plane,
                         // remove that reference and queue it for this plane instead
                         if let Some(idx) = queue_for_different_plane
@@ -50,7 +100,11 @@ fn find_rooms_in_plane(
                         {
                             queue_for_different_plane.remove(idx);
                         }
-                        queue.push_back(dest_room);
+                        queue.push_back(Location {
+                            x: location.x + x,
+                            y: location.y + y,
+                            room: dest_room,
+                        });
                     }
                 }
             }
@@ -58,11 +112,12 @@ fn find_rooms_in_plane(
     }
 
     // Remove rooms visited on this plane from the to-visit list
-    left_to_visit.retain(|r| !this_plane.contains(r));
+    left_to_visit.retain(|r| !this_plane.iter().any(|l| &l.room == r));
 
     let mut planes = vec![this_plane];
     for room in queue_for_different_plane.into_iter() {
-        let mut more_planes = find_rooms_in_plane(Some(room), left_to_visit);
+        let mut more_planes =
+            find_rooms_in_plane(Some(Location { room, x: 0, y: 0 }), left_to_visit);
         planes.append(&mut more_planes);
     }
 
@@ -78,93 +133,76 @@ fn find_rooms_in_plane(
 
 #[cfg(test)]
 mod test {
-    use super::{find_rooms_in_plane, Direction, Rc, Room};
+    use super::{find_rooms_in_plane, Direction, Location, Rc, Room, Vnum};
     use crate::model::{Door, Sector};
+
+    fn make_room(vnum: Vnum, exits: &[(Direction, (u32, Door))]) -> Rc<Room> {
+        Rc::new(Room {
+            vnum,
+            name: vnum.to_string(),
+            string_vnum: vnum.to_string(),
+            sector: Sector::Inside,
+            exits: exits.iter().copied().collect(),
+        })
+    }
+
+    fn rooms_from_locations(groups: Vec<Vec<Location>>) -> Vec<Vec<Rc<Room>>> {
+        groups
+            .into_iter()
+            .map(|group| group.into_iter().map(|loc| loc.room).collect::<Vec<_>>())
+            .collect()
+    }
 
     #[test]
     fn find_rooms_in_plane_groups_nsew_connections() {
         let mut rooms = vec![
-            Rc::new(Room {
-                vnum: 1000,
-                name: "1000".into(),
-                string_vnum: "1000".into(),
-                sector: Sector::Inside,
-                exits: [(Direction::North, (1001u32, Door::None)), (Direction::West, (500u32, Door::None))]
-                    .into_iter()
-                    .collect(),
-            }),
-            Rc::new(Room {
-                vnum: 1001,
-                name: "1001".into(),
-                string_vnum: "1001".into(),
-                sector: Sector::Inside,
-                exits: [(Direction::South, (1000u32, Door::None))].into_iter().collect(),
-            }),
+            make_room(
+                1000,
+                &[
+                    (Direction::North, (1001u32, Door::None)),
+                    (Direction::West, (500u32, Door::None)),
+                ],
+            ),
+            make_room(1001, &[(Direction::South, (1000u32, Door::None))]),
         ];
 
         let original_rooms = vec![rooms.clone()];
 
         let planes = find_rooms_in_plane(None, &mut rooms);
+        let planes = rooms_from_locations(planes);
         assert_eq!(planes, original_rooms);
     }
 
     #[test]
     fn find_rooms_in_plane_separates_updown_connections() {
         let mut rooms = vec![
-            Rc::new(Room {
-                vnum: 1000,
-                name: "1000".into(),
-                string_vnum: "1000".into(),
-                sector: Sector::Inside,
-                exits: [(Direction::North, (1001u32, Door::None)), (Direction::Up, (1002u32, Door::None))]
-                    .into_iter()
-                    .collect(),
-            }),
-            Rc::new(Room {
-                vnum: 1001,
-                name: "1001".into(),
-                string_vnum: "1001".into(),
-                sector: Sector::Inside,
-                exits: [(Direction::South, (1000u32, Door::None))].into_iter().collect(),
-            }),
-            Rc::new(Room {
-                vnum: 1002,
-                name: "1002".into(),
-                string_vnum: "1002".into(),
-                sector: Sector::Inside,
-                exits: [(Direction::Down, (1000u32, Door::None))].into_iter().collect(),
-            }),
+            make_room(
+                1000,
+                &[
+                    (Direction::North, (1001u32, Door::None)),
+                    (Direction::Up, (1002u32, Door::None)),
+                ],
+            ),
+            make_room(1001, &[(Direction::South, (1000u32, Door::None))]),
+            make_room(1002, &[(Direction::Down, (1000u32, Door::None))]),
         ];
 
         let planes = find_rooms_in_plane(None, &mut rooms);
+        let planes = rooms_from_locations(planes);
         assert_eq!(
             planes,
             vec![
                 vec![
-                    Rc::new(Room {
-                        vnum: 1000,
-                        name: "1000".into(),
-                        string_vnum: "1000".into(),
-                        sector: Sector::Inside,
-                        exits: [(Direction::North, (1001u32, Door::None)), (Direction::Up, (1002u32, Door::None))]
-                            .into_iter()
-                            .collect()
-                    }),
-                    Rc::new(Room {
-                        vnum: 1001,
-                        name: "1001".into(),
-                        string_vnum: "1001".into(),
-                        sector: Sector::Inside,
-                        exits: [(Direction::South, (1000u32, Door::None))].into_iter().collect()
-                    }),
+                    make_room(
+                        1000,
+                        &[
+                            (Direction::North, (1001u32, Door::None)),
+                            (Direction::Up, (1002u32, Door::None))
+                        ]
+                    ),
+                    make_room(1001, &[(Direction::South, (1000u32, Door::None))]),
                 ],
-                vec![Rc::new(Room {
-                    vnum: 1002,
-                    name: "1002".into(),
-                    string_vnum: "1002".into(),
-                    sector: Sector::Inside,
-                    exits: [(Direction::Down, (1000u32, Door::None))].into_iter().collect(),
-                })],
+                vec![make_room(1002, &[(Direction::Down, (1000u32, Door::None))])],
             ]
         );
     }
@@ -172,56 +210,21 @@ mod test {
     #[test]
     fn find_rooms_in_plane_includes_orphaned_planes() {
         let mut rooms = vec![
-            Rc::new(Room {
-                vnum: 1000,
-                name: "1000".into(),
-                string_vnum: "1000".into(),
-                sector: Sector::Inside,
-                exits: [(Direction::North, (1001u32, Door::None))].into_iter().collect(),
-            }),
-            Rc::new(Room {
-                vnum: 1001,
-                name: "1001".into(),
-                string_vnum: "1001".into(),
-                sector: Sector::Inside,
-                exits: [(Direction::South, (1000u32, Door::None))].into_iter().collect(),
-            }),
-            Rc::new(Room {
-                vnum: 1002,
-                name: "1002".into(),
-                string_vnum: "1002".into(),
-                sector: Sector::Inside,
-                exits: [].into_iter().collect(),
-            }),
+            make_room(1000, &[(Direction::North, (1001u32, Door::None))]),
+            make_room(1001, &[(Direction::South, (1000u32, Door::None))]),
+            make_room(1002, &[]),
         ];
 
         let planes = find_rooms_in_plane(None, &mut rooms);
+        let planes = rooms_from_locations(planes);
         assert_eq!(
             planes,
             vec![
                 vec![
-                    Rc::new(Room {
-                        vnum: 1000,
-                        name: "1000".into(),
-                        string_vnum: "1000".into(),
-                        sector: Sector::Inside,
-                        exits: [(Direction::North, (1001u32, Door::None))].into_iter().collect()
-                    }),
-                    Rc::new(Room {
-                        vnum: 1001,
-                        name: "1001".into(),
-                        string_vnum: "1001".into(),
-                        sector: Sector::Inside,
-                        exits: [(Direction::South, (1000u32, Door::None))].into_iter().collect()
-                    }),
+                    make_room(1000, &[(Direction::North, (1001u32, Door::None))]),
+                    make_room(1001, &[(Direction::South, (1000u32, Door::None))]),
                 ],
-                vec![Rc::new(Room {
-                    vnum: 1002,
-                    name: "1002".into(),
-                    string_vnum: "1002".into(),
-                    sector: Sector::Inside,
-                    exits: [].into_iter().collect(),
-                })],
+                vec![make_room(1002, &[])],
             ]
         )
     }
